@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import authRoutes from './routes/v1/auth.routes';
+import errorHandler from './middleware/errorHandler';
 
 
 const app = express();
@@ -51,10 +52,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 
 
-// Error handling middleware
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
-});
+// Error handling middleware (centralized)
+app.use(errorHandler);
 
 export default app;

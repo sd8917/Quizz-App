@@ -1,11 +1,11 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
-import { ValidationError, AuthenticationError } from '../utils/errors';
+import { ValidationError as AppValidationError, AuthenticationError as AppAuthError } from '../utils/errors';
 
 // Initialize auth service
 const authService = new AuthService();
 
-export const register = async (req: Request, res: Response): Promise<void> => {
+export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userData = {
       username: req.body.username,
@@ -15,16 +15,22 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     const user = await authService.register(userData);
     res.status(201).json(user);
-  } catch (error) {
-    if (error instanceof ValidationError) {
-      res.status(400).json({ message: error.message });
-      return;
+  } catch (error: any) {
+    // Let centralized handler format Mongoose validation errors
+    if (error && error.name === 'ValidationError') {
+      return next(error);
     }
-    res.status(500).json({ message: 'Server error' });
+
+    // Map known service errors to App errors so middleware returns proper codes
+    if (error && error.message === 'User already exists') {
+      return next(new AppValidationError(error.message));
+    }
+
+    return next(error);
   }
 };
 
-export const login = async (req: Request, res: Response): Promise<void> => {
+export const login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const credentials = {
       email: req.body.email,
@@ -33,11 +39,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     const user = await authService.login(credentials);
     res.json(user);
-  } catch (error) {
-    if (error instanceof AuthenticationError) {
-      res.status(401).json({ message: error.message });
-      return;
+  } catch (error: any) {
+    if (error && error.message === 'Invalid credentials') {
+      return next(new AppAuthError(error.message));
     }
-    res.status(500).json({ message: 'Server error' });
+
+    return next(error);
   }
 };

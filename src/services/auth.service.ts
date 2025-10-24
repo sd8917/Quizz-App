@@ -19,18 +19,24 @@ export class AuthService {
   }
 
   async register(userData: IRegisterRequest): Promise<IUserResponse> {
-    const { username, email } = userData;
+    console.log("userData ", userData)
+    const { username, email, password } = userData;
 
     // Check if user exists
-    const userExists = await User.findOne({ $or: [{ email }, { username }] });
+    const userExists = await User.findOne({ $and: [{ email }, { name: username }] });
     if (userExists) {
       throw new Error('User already exists');
     }
 
-    // Create user
-    const user = await User.create(userData);
-    const token = AuthService.generateToken((user._id as string).toString());
+    // Create user with correct fields and default role
+    const user = await User.create({
+      username,
+      email,
+      password,
+      roles: ['user'],
+    });
 
+    const token = AuthService.generateToken((user._id as string).toString());
     return AuthService.formatUserResponse(user, token);
   }
 
