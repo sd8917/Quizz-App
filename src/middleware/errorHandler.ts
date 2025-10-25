@@ -1,9 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../utils/errors';
+import { ApiError } from '../utils/apiError';
 import logger from '../utils/logger';
 
 export default function errorHandler(err: any, _req: Request, res: Response, _next: NextFunction) {
-    console.log("error ", err)
+    console.log("error 1233 ", err)
   const now = new Date().toISOString();
   // Mongoose validation error
   if (err && err.name === 'ValidationError' && err.errors) {
@@ -31,11 +32,16 @@ export default function errorHandler(err: any, _req: Request, res: Response, _ne
   }
 
   // App-specific errors
-  if (err instanceof AppError) {
-    return res.status(err.statusCode).json({
+  if (err instanceof AppError || err instanceof ApiError) {
+    const response: any = {
       success: false,
       message: err.message,
-    });
+    };
+    if (process.env.NODE_ENV === 'development') {
+      response.stack = err.stack;
+      response.error = err;
+    }
+    return res.status(err.statusCode || 500).json(response);
   }
 
   // Fallback: log all server errors with Winston

@@ -1,33 +1,71 @@
-import mongoose from 'mongoose';
+import mongoose, { Document, Schema } from 'mongoose';
 
-export interface IPost extends mongoose.Document {
-  title: string;
-  content: string;
-  author: mongoose.Types.ObjectId;
-  tags: string[];
+export interface IChannel extends Document {
+  name: string;
+  description?: string;
+  owner: mongoose.Types.ObjectId;
+  members: {
+    user: mongoose.Types.ObjectId;
+    role: 'admin' | 'team' | 'viewer';
+  }[];
+  isArchived: boolean;
+  archivedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-const postSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  content: {
-    type: String,
-    required: true
-  },
-  author: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  tags: [{
-    type: String,
-    trim: true
-  }]
-}, {
-  timestamps: true
-});
+const channelSchema = new Schema<IChannel>(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
-export const Post = mongoose.model<IPost>('Post', postSchema);
+    description: {
+      type: String,
+      trim: true,
+    },
+
+    owner: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+
+    members: [
+      {
+        user: {
+          type: Schema.Types.ObjectId,
+          ref: 'User',
+          required: true,
+        },
+        role: {
+          type: String,
+          enum: ['admin', 'team', 'viewer'],
+          default: 'team',
+        },
+      },
+    ],
+
+    isArchived: {
+      type: Boolean,
+      default: false,
+    },
+
+    archivedAt: {
+      type: Date,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+// Indexes for faster lookups
+// channelSchema.index({ owner: 1 });
+// channelSchema.index({ 'members.user': 1 });
+// channelSchema.index({ isArchived: 1 });
+
+export const Channel = mongoose.model<IChannel>('Channel', channelSchema);

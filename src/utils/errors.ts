@@ -30,3 +30,17 @@ export class NotFoundError extends AppError {
     this.name = 'NotFoundError';
   }
 }
+
+export class BadRequestError extends AppError {
+  constructor(message: string) {
+    super(message, 400);
+    this.name = 'BadRequestError';
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message: string) {
+    super(message, 403);
+    this.name = 'ForbiddenError';
+  }
+}

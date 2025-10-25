@@ -1,93 +1,74 @@
-import { Request, Response } from 'express';
-import { Post } from '../models/post.model';
+import { Request, Response, NextFunction } from 'express';
+import { channelService } from '../services/channelService';
 
-export const createPost = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { title, content, tags } = req.body;
-    const post = await Post.create({
-      title,
-      content,
-      tags,
-      author: req.user._id,
-    });
-
-    res.status(201).json(post);
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-export const getPosts = async (_req: Request, res: Response): Promise<void> => {
-  try {
-    const posts = await Post.find()
-      .populate('author', 'username')
-      .sort({ createdAt: -1 });
-    res.json(posts);
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-export const getPostById = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const post = await Post.findById(req.params.id).populate('author', 'username');
-    if (!post) {
-      res.status(404).json({ message: 'Post not found' });
-      return;
+export const channelController = {
+  async createChannel(req: Request, res: Response, next: NextFunction) {
+    try {
+      const ownerId = req.user.id;
+      const { name, description } = req.body;
+      console.log("change created _ ", name, description, ownerId);
+      const channel = await channelService.createChannel(ownerId, name, description);
+      res.status(201).json(channel);
+    } catch (err) {
+      next(err);
     }
-    res.json(post);
-    return;
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' });
-    return;
-  }
-};
+  },
 
-export const updatePost = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const post = await Post.findById(req.params.id);
-    if (!post) {
-      res.status(404).json({ message: 'Post not found' });
-      return;
+  async getChannel(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { channelId } = req.params;
+      const userId = req.user.id;
+      const channel = await channelService.getChannel(channelId, userId);
+      res.json(channel);
+    } catch (err) {
+      next(err);
     }
+  },
 
-    if (post.author.toString() !== req.user._id.toString()) {
-      res.status(401).json({ message: 'Not authorized' });
-      return;
+  async inviteUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const inviterId = req.user.id;
+      console.log("inviterId ", req.params);
+      const { channelId } = req.params;
+      const { inviteeId, role } = req.body;
+      const updated = await channelService.inviteUser(channelId, inviterId, inviteeId, role);
+      res.status(200).json(updated);
+    } catch (err) {
+      next(err);
     }
+  },
 
-    const { title, content, tags } = req.body;
-    post.title = title || post.title;
-    post.content = content || post.content;
-    post.tags = tags || post.tags;
-
-    const updatedPost = await post.save();
-    res.json(updatedPost);
-    return;
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' });
-    return;
-  }
-};
-
-export const deletePost = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const post = await Post.findById(req.params.id);
-    if (!post) {
-      res.status(404).json({ message: 'Post not found' });
-      return;
+  async deleteChannel(req: Request, res: Response, next: NextFunction) {
+    try {
+      const user = req.user;
+      if (!user.roles || !user.roles.includes('super')) {
+        return res.status(403).json({ message: 'Only super users can delete channels.' });
+      }
+      const { channelId } = req.params;
+      const deletedCount = await channelService.deleteChannel(channelId);
+      res.json({ deleted: deletedCount });
+    } catch (err) {
+      next(err);
     }
+  },
 
-    if (post.author.toString() !== req.user._id.toString()) {
-      res.status(401).json({ message: 'Not authorized' });
-      return;
+  async listUserChannels(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user.id;
+      const channels = await channelService.listUserChannels(userId);
+      res.json({ channels });
+    } catch (err) {
+      next(err);
     }
+  },
 
-    await Post.deleteOne({ _id: post._id });
-    res.json({ message: 'Post removed' });
-    return;
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' });
-    return;
-  }
+  // async archiveOldChannels(req: Request, res: Response, next: NextFunction) {
+  //   try {
+  //     const { days } = req.query;
+  //     const count = await channelService.archiveOldChannels(Number(days) || 90);
+  //     res.json({ archived: count });
+  //   } catch (err) {
+  //     next(err);
+  //   }
+  // },
 };
