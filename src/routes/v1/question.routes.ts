@@ -11,7 +11,9 @@ router.use(protect);
 router.get('/search', (questionController.searchQuestions));
 
 // Channel questions
-router.get('/channel/:channelId', (questionController.getChannelQuestions));
+router.get('/channel/:channelId', questionController.getChannelQuestionsById);
+router.post('/channel/:channelId', questionController.adminCreateQuestion);
+router.post('/channel/:channelId/bulk', questionController.adminBulkCreateQuestions);
 
 // Question CRUD
 router.post('/', (questionController.createQuestion));

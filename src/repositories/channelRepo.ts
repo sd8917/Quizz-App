@@ -32,13 +32,13 @@ export const channelRepo = {
   },
 
   /**
-   * Get all channels where user is owner or member
+   * Get all channels where user is an admin (owner or admin role)
    */
   async getChannelsByUser(userId: string): Promise<IChannel[]> {
     return Channel.find({
       $or: [
         { owner: userId },
-        { 'members.user': userId }
+        { 'members': { $elemMatch: { user: userId, role: 'admin' } } }
       ],
       isArchived: false
     })

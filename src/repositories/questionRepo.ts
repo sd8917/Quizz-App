@@ -11,7 +11,8 @@ export class QuestionRepository {
     return await Question.findById(id)
       .populate('author', 'username email')
       .populate('channel', 'name')
-      .populate('answers.author', 'username email');
+      .populate('answers.author', 'username email')
+      .select('+options +type +difficulty +points +questionGroupTitle'); // Explicitly include these fields
   }
 
   async findByChannel(channelId: string, page: number = 1, limit: number = 10): Promise<{ questions: IQuestion[]; total: number }> {
@@ -19,6 +20,7 @@ export class QuestionRepository {
     const [questions, total] = await Promise.all([
       Question.find({ channel: channelId, isArchived: false })
         .populate('author', 'username email')
+        .select('+options +type +difficulty +points +questionGroupTitle') // Explicitly include these fields
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),

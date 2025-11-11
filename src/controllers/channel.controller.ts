@@ -19,7 +19,14 @@ export const channelController = {
       const { channelId } = req.params;
       const userId = req.user.id;
       const channel = await channelService.getChannel(channelId, userId);
-      res.json(channel);
+      res.json({
+        success: true,
+        data: {
+          channel,
+          userRole: channel.owner.toString() === userId ? 'owner' : 
+                    channel.members.find(m => m.user.toString() === userId)?.role || 'none'
+        }
+      });
     } catch (err) {
       next(err);
     }
@@ -28,7 +35,6 @@ export const channelController = {
   async inviteUser(req: Request, res: Response, next: NextFunction) {
     try {
       const inviterId = req.user.id;
-      console.log("inviterId ", req.params);
       const { channelId } = req.params;
       const { inviteeId, role } = req.body;
       const updated = await channelService.inviteUser(channelId, inviterId, inviteeId, role);

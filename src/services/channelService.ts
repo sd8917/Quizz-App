@@ -30,11 +30,16 @@ export const channelService = {
     const channel = await channelRepo.getChannelById(channelId);
     if (!channel) throw new ApiError(404, 'Channel not found');
 
-    console.log("channel members ", channel);
-
-    // ensure user is member
+    // Check member access
     const isMember = channel.members.some(m => m.user.toString() === userId);
-    if (!isMember) throw new ApiError(403, 'Access denied');
+    const isOwner = channel.owner.toString() === userId;
+
+    // Allow access if:
+    // 1. User is owner
+    // 2. User is a member
+    if (!isOwner && !isMember) {
+      throw new ApiError(403, 'Access denied - Must be a member or owner of the channel');
+    }
 
     return channel;
   },
