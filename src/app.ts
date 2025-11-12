@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import authRoutes from './routes/v1/auth.routes';
 import channelRoutes from './routes/v1/channel.routes';
 import {questionRoutes} from './routes/v1/question.routes';
+import { quizRoutes } from './routes/v1/quiz.routes';
 import errorHandler from './middleware/errorHandler';
 
 
@@ -54,8 +55,8 @@ app.get('/health', (_req, res) => {
 app.use('/api/', authRoutes);
 app.use('/api/channel', channelRoutes);
 
-// question routes
-app.use('/api/questions', questionRoutes);
+// quiz routes
+app.use('/api/quiz', quizRoutes);
 
 
 // Error handling middleware (centralized)

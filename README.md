@@ -85,6 +85,17 @@ quiz-backend/
 
 ```
 
+## ENV STRUCTURE
+```
+PORT=8000
+MONGODB_URI=XXX
+JWT_SECRET=XXX
+NODE_ENV=XXX
+EMAIL_PASS=XXX
+EMAIL_USER=XXX
+
+```
+
 
 ## ⚙️ Tech Stack
 
