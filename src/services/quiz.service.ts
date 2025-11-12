@@ -1,4 +1,4 @@
-import { Mongoose, ObjectId } from "mongoose";
+import { ObjectId } from "mongoose";
 import { QuizRepository } from "../repositories/quizRepo";
 
 export class QuizService {

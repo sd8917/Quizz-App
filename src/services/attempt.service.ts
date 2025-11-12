@@ -1,6 +1,7 @@
 import { QuizRepository } from "../repositories/quizRepo";
 import { AttemptRepository } from "../repositories/attempRepo";
-import { ObjectId } from "mongoose";
+import mongoose, { ObjectId } from "mongoose";
+import { Attempt } from "../models/attempt.model";
 
 export class AttemptService {
   private quizRepo = new QuizRepository();
@@ -54,7 +55,34 @@ export class AttemptService {
     return this.attemptRepo.getUserAttempts(userId);
   }
 
-  async getLeaderboard(channelId: string) {
-    return this.attemptRepo.getChannelLeaderboard(channelId);
-  }
+  
+async getLeaderboard(channelId: string) {
+  const channelObjectId = new mongoose.Types.ObjectId(channelId);
+  return Attempt.aggregate([
+    { $match: { channelId: channelObjectId } },
+    { $group: {
+        _id: "$userId",
+        bestPercentage: { $max: "$percentage" },
+        lastAttemptId: { $first: "$_id" } // or store a doc for reference
+      }
+    },
+    { $sort: { bestPercentage: -1 } },
+    { $limit: 20 },
+    { $lookup: {
+        from: "users",
+        localField: "_id",
+        foreignField: "_id",
+        as: "user"
+      }
+    },
+    { $unwind: "$user" },
+    { $project: {
+        userId: "$_id",
+        username: "$user.username",
+        email: "$user.email",
+        bestPercentage: 1
+      }
+    }
+  ]);
+}
 }

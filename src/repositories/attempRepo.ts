@@ -24,9 +24,10 @@ export class AttemptRepository {
   }
 
   async getChannelLeaderboard(channelId: string) {
-    return Attempt.find({ channelId })
+    const res = Attempt.find({ channelId })
       .populate("userId", "name email")
       .sort({ percentage: -1 })
       .limit(20);
+    return res
   }
 }
