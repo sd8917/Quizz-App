@@ -441,3 +441,78 @@ Response (current behavior)
 ```
 
 If you want these examples expanded (full request headers, more fields, or an OpenAPI spec), tell me which endpoints to prioritize and I will add them.
+
+Profile & Role Management
+- Get my profile
+
+Request
+```http
+GET /api/v1/profile
+Authorization: Bearer <token>
+```
+
+Response
+```json
+{
+      "success": true,
+      "data": { "_id": "610...", "username": "alice", "email": "alice@example.com", "roles": ["user"] }
+}
+```
+
+- Update my profile
+
+Request
+```json
+PUT /api/v1/profile
+Authorization: Bearer <token>
+{
+      "username": "alice2",
+      "password": "new-password"
+}
+```
+
+Response
+```json
+{
+      "success": true,
+      "data": { "_id": "610...", "username": "alice2", "email": "alice@example.com", "roles": ["user"] }
+}
+```
+
+- Super admin: list users
+
+Request
+```http
+GET /api/v1/profile/
+Authorization: Bearer <token-with-super-role>
+```
+
+Response
+```json
+{
+      "success": true,
+      "data": [ { "_id": "610...", "username": "alice", "email": "alice@example.com", "roles": ["user"] } ]
+}
+```
+
+- Super admin: update another user's roles
+
+Request
+```json
+PUT /api/v1/profile/:userId/roles
+Authorization: Bearer <token-with-super-role>
+{
+      "roles": ["user", "admin"]
+}
+```
+
+Response
+```json
+{
+      "success": true,
+      "data": { "_id": "611...", "username": "bob", "email": "bob@example.com", "roles": ["user","admin"] }
+}
+```
+
+Notes:
+- The `authorizeRoles('super')` middleware gatekeeps the super-admin endpoints. To assign the first super user, either create the user directly in the database with `roles: ['super']` or temporarily set a user's role via the database.
