@@ -7,6 +7,7 @@ import authRoutes from './routes/v1/auth.routes';
 import channelRoutes from './routes/v1/channel.routes';
 import {questionRoutes} from './routes/v1/question.routes';
 import { quizRoutes } from './routes/v1/quiz.routes';
+import { attemptRoutes } from './routes/v1/attempt.routes';
 import errorHandler from './middleware/errorHandler';
 
 
@@ -57,6 +58,9 @@ app.use('/api/channel', channelRoutes);
 
 // quiz routes
 app.use('/api/quiz', quizRoutes);
+
+//leaderboard
+app.use('/api/attempt', attemptRoutes);
 
 
 // Error handling middleware (centralized)
