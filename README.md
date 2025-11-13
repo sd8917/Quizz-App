@@ -93,6 +93,9 @@ JWT_SECRET=XXX
 NODE_ENV=XXX
 EMAIL_PASS=XXX
 EMAIL_USER=XXX
+REFRESH_TOKEN_EXPIRY=XXX
+ACCESS_TOKEN_EXPIRY=XXX
+
 
 ```
 
@@ -106,9 +109,50 @@ EMAIL_USER=XXX
 - File Storage	               AWS S3 + Glacier
 - Authentication	           JWT (Access: 5min, Refresh: 30 days)
 - Authorization                Role-Based Access Control (RBAC)
+- Rate Limiting                express-rate-limit (IP-based throttling)
 - CI/CD	                       GitHub Actions / GitLab CI
 - Deployment 	               Will think over it.
 - Monitoring	               Prometheus, Grafana, Sentry, ELK Stack
+
+## 🛡️ Rate Limiting
+
+The API implements IP-based rate limiting using `express-rate-limit` to protect against abuse and DDoS attacks:
+
+**Rate Limit Tiers:**
+
+1. **Authentication Endpoints** (Login/Register)
+   - 5 requests per 15 minutes per IP
+   - Prevents brute force attacks
+   - Routes: `/api/v1/auth/login`, `/api/v1/auth/register`
+
+2. **Token Refresh Endpoint**
+   - 20 requests per 15 minutes per IP
+   - More lenient since tokens expire frequently
+   - Route: `/api/v1/auth/refresh`
+
+3. **General API Endpoints**
+   - 100 requests per 15 minutes per IP
+   - Applied to all `/api/*` routes
+   - Excludes health check endpoints
+
+4. **Sensitive Operations** (Role Management)
+   - 10 requests per 1 hour per IP
+   - Extra protection for admin operations
+   - Route: `/api/v1/profile/user/:userId/roles`
+
+**Rate Limit Headers:**
+When rate limited, responses include:
+- `RateLimit-Limit`: Maximum requests allowed
+- `RateLimit-Remaining`: Requests remaining
+- `RateLimit-Reset`: Time when limit resets (Unix timestamp)
+
+**Error Response (429 Too Many Requests):**
+```json
+{
+  "success": false,
+  "message": "Too many requests from this IP, please try again after 15 minutes"
+}
+```
 
 ## 🔑 Token-Based Authentication
 

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { profileController } from '../../controllers/profile.controller';
 import { protect } from '../../middleware/auth.middleware';
 import authorizeRoles from '../../middleware/role.middleware';
+import { strictLimiter } from '../../middleware/rateLimit.middleware';
 
 const router = Router();
 
@@ -11,9 +12,9 @@ router.use(protect);
 router.get('/', profileController.getMe);
 router.put('/', profileController.updateMe);
 
-// Admin only routes
+// Admin only routes with strict rate limiting
 router.get('/users', authorizeRoles('admin'), profileController.listUsers);
-router.put('/user/:userId/roles', authorizeRoles('admin'), profileController.updateUserRoles);
+router.put('/user/:userId/roles', strictLimiter, authorizeRoles('admin'), profileController.updateUserRoles);
 
 export { router as profileRoutes };
     

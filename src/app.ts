@@ -9,6 +9,7 @@ import { quizRoutes } from './routes/v1/quiz.routes';
 import { attemptRoutes } from './routes/v1/attempt.routes';
 import { profileRoutes } from './routes/v1/profile.routes';
 import errorHandler from './middleware/errorHandler';
+import { apiLimiter } from './middleware/rateLimit.middleware';
 
 
 const app = express();
@@ -19,6 +20,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(helmet());
 app.use(morgan('combined'));
+
+// Apply rate limiting to all API routes
+app.use('/api/', apiLimiter);
 
 // --- Healthcheck ---
 app.get('/', (_req, res) => {
@@ -62,7 +66,7 @@ app.use('/api/quiz', quizRoutes);
 //leaderboard
 app.use('/api/attempt', attemptRoutes);
 
-//leaderboard
+//profile routes
 app.use('/api/profile', profileRoutes);
 
 
