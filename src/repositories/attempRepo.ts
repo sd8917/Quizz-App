@@ -1,5 +1,4 @@
 import { Attempt } from "../models/attempt.model";
-import mongoose from "mongoose";
 
 export class AttemptRepository {
     

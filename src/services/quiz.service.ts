@@ -20,7 +20,7 @@ export class QuizService {
     return this.repo.getQuestionsForTest(channelId);
   }
 
-  async submitTest(channelId: string, userAnswers: any[]) {
+  async submitTest(_channelId: string, userAnswers: any[]) {
     // 1. Fetch actual questions with correct answers
     const ids = userAnswers.map(a => a.questionId);
 

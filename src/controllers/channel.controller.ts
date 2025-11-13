@@ -4,13 +4,19 @@ import { channelService } from '../services/channelService';
 export const channelController = {
   async createChannel(req: Request, res: Response, next: NextFunction) {
     try {
-      const ownerId = req.user.id;
+      const user = req.user;
+      // Only creator or admin can create channels
+      if (!user.roles || (!user.roles.includes('creator') && !user.roles.includes('admin'))) {
+        return res.status(403).json({ success: false, message: 'Only creators and admins can create channels' });
+      }
+      const ownerId = user.id;
       const { name, description } = req.body;
-      console.log("change created _ ", name, description, ownerId);
+      console.log("channel created: ", name, description, ownerId);
       const channel = await channelService.createChannel(ownerId, name, description);
       res.status(201).json(channel);
+      return;
     } catch (err) {
-      next(err);
+      return next(err);
     }
   },
 
@@ -34,27 +40,34 @@ export const channelController = {
 
   async inviteUser(req: Request, res: Response, next: NextFunction) {
     try {
-      const inviterId = req.user.id;
+      const user = req.user;
+      // Only creator or admin can invite users
+      if (!user.roles || (!user.roles.includes('creator') && !user.roles.includes('admin'))) {
+        return res.status(403).json({ success: false, message: 'Only creators and admins can invite users' });
+      }
+      const inviterId = user.id;
       const { channelId } = req.params;
       const { inviteeId, role } = req.body;
       const updated = await channelService.inviteUser(channelId, inviterId, inviteeId, role);
       res.status(200).json(updated);
+      return;
     } catch (err) {
-      next(err);
+      return next(err);
     }
   },
 
   async deleteChannel(req: Request, res: Response, next: NextFunction) {
     try {
       const user = req.user;
-      if (!user.roles || !user.roles.includes('super')) {
-        return res.status(403).json({ message: 'Only super users can delete channels.' });
+      if (!user.roles || !user.roles.includes('admin')) {
+        return res.status(403).json({ success: false, message: 'Only admins can delete channels' });
       }
       const { channelId } = req.params;
       const deletedCount = await channelService.deleteChannel(channelId);
-      res.json({ deleted: deletedCount });
+      res.json({ success: true, deleted: deletedCount });
+      return;
     } catch (err) {
-      next(err);
+      return next(err);
     }
   },
 

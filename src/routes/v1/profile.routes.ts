@@ -11,9 +11,9 @@ router.use(protect);
 router.get('/', profileController.getMe);
 router.put('/', profileController.updateMe);
 
-// Super admin only,  authorizeRoles('super') addd below
-router.get('/users', profileController.listUsers);
-router.put('/user/:userId/roles', authorizeRoles('super'), profileController.updateUserRoles);
+// Admin only routes
+router.get('/users', authorizeRoles('admin'), profileController.listUsers);
+router.put('/user/:userId/roles', authorizeRoles('admin'), profileController.updateUserRoles);
 
 export { router as profileRoutes };
     

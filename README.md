@@ -105,9 +105,35 @@ EMAIL_USER=XXX
 - Caching / Queue	           Redis + BullMQ
 - File Storage	               AWS S3 + Glacier
 - Authentication	           JWT + Refresh Tokens (Redis-backed)
+- Authorization                Role-Based Access Control (RBAC)
 - CI/CD	                       GitHub Actions / GitLab CI
 - Deployment 	               Will think over it.
 - Monitoring	               Prometheus, Grafana, Sentry, ELK Stack
+
+## 🔐 Role-Based Access Control (RBAC)
+
+The system implements a three-tier role hierarchy:
+
+**user** (default role)
+- Can take/submit quizzes
+- Can view their own attempts and scores
+- Can view channels they are invited to
+
+**creator**
+- All user permissions, plus:
+- Can create channels
+- Can create quiz questions (single or bulk)
+- Can invite users to channels
+- Intended for quiz creators and content managers
+
+**admin**
+- All creator permissions, plus:
+- Can delete any channel
+- Can view all users in the system
+- Can manage user roles (assign/remove user, creator, or admin roles)
+- Full system access for administrative tasks
+
+Role assignment: New users are assigned the 'user' role by default. Admins can promote users to 'creator' or 'admin' via the profile management API.
 
 ## 🧩 Data Models (MongoDB + Mongoose)
 
@@ -115,12 +141,11 @@ EMAIL_USER=XXX
 ```
 {
   _id: ObjectId,
-  name: String,
+  username: String,
   email: { type: String, unique: true },
-  passwordHash: String,
-  roles: ["user", "super"],
-  createdAt: Date,
-  lastLogin: Date
+  password: String (hashed),
+  roles: ["user", "creator", "admin"],
+  createdAt: Date
 }
 ```
 
@@ -203,24 +228,28 @@ Endpoints (summary)
       - POST /api/v1/auth/login — Login and receive JWT (public)
 
 - Channels (all protected)
-      - POST /api/v1/channel/ — Create a channel
-      - GET /api/v1/channel/ — List channels for current user
-      - GET /api/v1/channel/:channelId — Get channel details
-      - POST /api/v1/channel/:channelId/invite — Invite a user to a channel
-      - DELETE /api/v1/channel/:channelId — Delete a channel
+  - POST /api/v1/channel/ — Create a channel (creator/admin only)
+  - GET /api/v1/channel/ — List channels for current user
+  - GET /api/v1/channel/:channelId — Get channel details
+  - POST /api/v1/channel/:channelId/invite — Invite a user to a channel (creator/admin only)
+  - DELETE /api/v1/channel/:channelId — Delete a channel (admin only)
 
 - Quiz (protected)
-      - POST /api/v1/quiz/channel/:channelId — (ADMIN) Create a question in a channel
-      - POST /api/v1/quiz/channel/:channelId/bulk — (ADMIN) Bulk create questions
-      - GET /api/v1/quiz/channel/:channelId/questions — Get questions for a channel (user view)
-      - POST /api/v1/quiz/channel/:channelId/submit — Submit a quiz (user-facing endpoint used to attempt/submit answers)
+  - POST /api/v1/quiz/channel/:channelId — Create a question in a channel (creator/admin only)
+  - POST /api/v1/quiz/channel/:channelId/bulk — Bulk create questions (creator/admin only)
+  - GET /api/v1/quiz/channel/:channelId/questions — Get questions for a channel (all authenticated users)
+  - POST /api/v1/quiz/channel/:channelId/submit — Submit a quiz (all authenticated users)
 
 - Attempts (protected)
-      - POST /api/v1/attempt/channel/:channelId/submit — Submit quiz attempt (service prevents duplicate attempts by default)
-      - GET /api/v1/attempt/user — Get attempts for current user
-      - GET /api/v1/attempt/channel/:channelId/leaderboard — Get leaderboard for a channel (top 20 by percentage)
+  - POST /api/v1/attempt/channel/:channelId/submit — Submit quiz attempt (service prevents duplicate attempts by default)
+  - GET /api/v1/attempt/user — Get attempts for current user
+  - GET /api/v1/attempt/channel/:channelId/leaderboard — Get leaderboard for a channel (top 20 by percentage)
 
-Notes about attempts & leaderboard
+- Profile (protected)
+  - GET /api/v1/profile/ — Get current user profile
+  - PUT /api/v1/profile/ — Update current user profile (username, email, password)
+  - GET /api/v1/profile/users — List all users (admin only)
+  - PUT /api/v1/profile/user/:userId/roles — Update user roles (admin only)Notes about attempts & leaderboard
 - Current behavior: the service checks for an existing attempt document for the (userId, channelId) pair and rejects a second submission with an error "You have already submitted this quiz.". If you want multiple attempts per user, the check in `AttemptService.submitQuizAttempt` must be adjusted (remove the guard, allow upserts, or store history and aggregate best scores in leaderboard).
 - The leaderboard endpoint currently returns attempt documents sorted by `percentage` descending and limited to 20. If multiple attempts per user are allowed the leaderboard may show the same user multiple times; consider using an aggregation to group by `userId` and pick the best score.
 
@@ -474,45 +503,91 @@ Authorization: Bearer <token>
 Response
 ```json
 {
-      "success": true,
-      "data": { "_id": "610...", "username": "alice2", "email": "alice@example.com", "roles": ["user"] }
+  "success": true,
+  "data": { "_id": "610...", "username": "alice2", "email": "alice@example.com", "roles": ["user"] }
 }
 ```
 
-- Super admin: list users
+Profile (protected)
+- Get current user profile
 
 Request
 ```http
 GET /api/v1/profile/
-Authorization: Bearer <token-with-super-role>
+Authorization: Bearer <token>
 ```
 
 Response
 ```json
 {
-      "success": true,
-      "data": [ { "_id": "610...", "username": "alice", "email": "alice@example.com", "roles": ["user"] } ]
+  "success": true,
+  "data": { "_id": "610...", "username": "alice", "email": "alice@example.com", "roles": ["user"] }
 }
 ```
 
-- Super admin: update another user's roles
+- Update current user profile
 
 Request
 ```json
-PUT /api/v1/profile/:userId/roles
-Authorization: Bearer <token-with-super-role>
+PUT /api/v1/profile/
+Authorization: Bearer <token>
 {
-      "roles": ["user", "admin"]
+  "username": "alice_updated",
+  "email": "alice.new@example.com"
 }
 ```
 
 Response
 ```json
 {
-      "success": true,
-      "data": { "_id": "611...", "username": "bob", "email": "bob@example.com", "roles": ["user","admin"] }
+  "success": true,
+  "data": { "_id": "610...", "username": "alice_updated", "email": "alice.new@example.com", "roles": ["user"] }
 }
 ```
+
+- Admin: list all users
+
+Request
+```http
+GET /api/v1/profile/users
+Authorization: Bearer <admin-token>
+```
+
+Response
+```json
+{
+  "success": true,
+  "data": [
+    { "_id": "610...", "username": "alice", "email": "alice@example.com", "roles": ["user"] },
+    { "_id": "611...", "username": "bob", "email": "bob@example.com", "roles": ["creator"] }
+  ]
+}
+```
+
+- Admin: update user roles
+
+Request
+```json
+PUT /api/v1/profile/user/:userId/roles
+Authorization: Bearer <admin-token>
+{
+  "roles": ["user", "creator"]
+}
+```
+
+Response
+```json
+{
+  "success": true,
+  "data": { "_id": "611...", "username": "bob", "email": "bob@example.com", "roles": ["user", "creator"] }
+}
+```
+
+Role Management Notes:
+- Only admins can view all users and manage roles
+- Users can be assigned multiple roles (e.g., ["user", "creator"])
+- Role hierarchy: user < creator < admin
+- Creators can create channels, questions, and invite users; users can only take tests; admins have full system access
 
 Notes:
 - The `authorizeRoles('super')` middleware gatekeeps the super-admin endpoints. To assign the first super user, either create the user directly in the database with `roles: ['super']` or temporarily set a user's role via the database.

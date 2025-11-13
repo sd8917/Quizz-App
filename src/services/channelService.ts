@@ -74,7 +74,7 @@ export const channelService = {
   /**
    * Delete a channel permanently (super only)
    */
-  async deleteChannel(channelId: string) {
+  async deleteChannel(_channelId: string) {
     return await channelRepo.deleteArchivedChannels();
   },
 
