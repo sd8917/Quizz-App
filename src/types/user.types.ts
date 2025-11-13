@@ -13,7 +13,8 @@ export interface IUserResponse {
   _id: string;
   username: string;
   email: string;
-  token?: string;
+  accessToken?: string;
+  refreshToken?: string;
 }
 
 export interface ILoginRequest {

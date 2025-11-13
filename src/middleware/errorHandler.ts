@@ -4,7 +4,6 @@ import { ApiError } from '../utils/apiError';
 import logger from '../utils/logger';
 
 export default function errorHandler(err: any, _req: Request, res: Response, _next: NextFunction) {
-    console.log("error 1233 ", err)
   const now = new Date().toISOString();
   // Mongoose validation error
   if (err && err.name === 'ValidationError' && err.errors) {

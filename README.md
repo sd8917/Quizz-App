@@ -104,11 +104,35 @@ EMAIL_USER=XXX
 - ORM/ODM	                   Mongoose
 - Caching / Queue	           Redis + BullMQ
 - File Storage	               AWS S3 + Glacier
-- Authentication	           JWT + Refresh Tokens (Redis-backed)
+- Authentication	           JWT (Access: 5min, Refresh: 30 days)
 - Authorization                Role-Based Access Control (RBAC)
 - CI/CD	                       GitHub Actions / GitLab CI
 - Deployment 	               Will think over it.
 - Monitoring	               Prometheus, Grafana, Sentry, ELK Stack
+
+## 🔑 Token-Based Authentication
+
+The system uses a dual-token approach for enhanced security:
+
+**Access Token (JWT)**
+- Short-lived: 5 minutes expiry
+- Used for API authentication (Bearer token in Authorization header)
+- Contains user ID and role information
+- Stateless verification using JWT secret
+
+**Refresh Token**
+- Long-lived: 30 days expiry
+- Stored in MongoDB with user reference
+- Used to obtain new access tokens when they expire
+- Can be revoked (logout, security breach)
+- Automatic cleanup via TTL index after expiration
+
+**Security Features:**
+- Access tokens expire quickly to minimize exposure if compromised
+- Refresh tokens stored in database allow server-side revocation
+- Single logout revokes one refresh token
+- Logout-all revokes all user's refresh tokens (useful for security incidents)
+- MongoDB TTL index auto-deletes expired refresh tokens
 
 ## 🔐 Role-Based Access Control (RBAC)
 
@@ -224,10 +248,11 @@ Note: route files are registered automatically from `src/routes/v1` and mounted 
 Endpoints (summary)
 
 - Auth
-      - POST /api/v1/auth/register — Register a new user (public)
-      - POST /api/v1/auth/login — Login and receive JWT (public)
-
-- Channels (all protected)
+  - POST /api/v1/auth/register — Register a new user (public)
+  - POST /api/v1/auth/login — Login and receive JWT tokens (public)
+  - POST /api/v1/auth/refresh — Refresh access token using refresh token (public)
+  - POST /api/v1/auth/logout — Logout and revoke refresh token (public)
+  - POST /api/v1/auth/logout-all — Logout from all devices (protected)- Channels (all protected)
   - POST /api/v1/channel/ — Create a channel (creator/admin only)
   - GET /api/v1/channel/ — List channels for current user
   - GET /api/v1/channel/:channelId — Get channel details
@@ -259,7 +284,14 @@ If you'd like, I can add a short example request/response for each endpoint or g
 
 All protected endpoints require the header:
 
-Authorization: Bearer <token>
+Authorization: Bearer <accessToken>
+
+**Authentication Flow:**
+1. Login/Register returns both `accessToken` (5 min expiry) and `refreshToken` (30 days expiry)
+2. Use `accessToken` for all API requests in the Authorization header
+3. When `accessToken` expires (401 error), use `refreshToken` to get a new `accessToken`
+4. Store `refreshToken` securely (httpOnly cookie recommended in production)
+5. On logout, send `refreshToken` to revoke it from the database
 
 Auth
 - Register
@@ -268,17 +300,20 @@ Request
 ```json
 POST /api/v1/auth/register
 {
-      "name": "Jane Doe",
-      "email": "jane@example.com",
-      "password": "s3cret123"
+  "username": "janedoe",
+  "email": "jane@example.com",
+  "password": "s3cret123"
 }
 ```
 
 Response
 ```json
 {
-      "success": true,
-      "data": { "id": "641...", "name": "Jane Doe", "email": "jane@example.com" }
+  "_id": "641...",
+  "username": "janedoe",
+  "email": "jane@example.com",
+  "accessToken": "eyJhbGci...",
+  "refreshToken": "a1b2c3d4e5f6..."
 }
 ```
 
@@ -288,16 +323,71 @@ Request
 ```json
 POST /api/v1/auth/login
 {
-      "email": "jane@example.com",
-      "password": "s3cret123"
+  "email": "jane@example.com",
+  "password": "s3cret123"
 }
 ```
 
 Response
 ```json
 {
-      "success": true,
-      "data": { "token": "eyJhbGci...", "expiresIn": 3600 }
+  "_id": "641...",
+  "username": "janedoe",
+  "email": "jane@example.com",
+  "accessToken": "eyJhbGci...",
+  "refreshToken": "a1b2c3d4e5f6..."
+}
+```
+
+- Refresh Token
+
+Request
+```json
+POST /api/v1/auth/refresh
+{
+  "refreshToken": "a1b2c3d4e5f6..."
+}
+```
+
+Response
+```json
+{
+  "accessToken": "eyJhbGci..."
+}
+```
+
+- Logout
+
+Request
+```json
+POST /api/v1/auth/logout
+{
+  "refreshToken": "a1b2c3d4e5f6..."
+}
+```
+
+Response
+```json
+{
+  "success": true,
+  "message": "Logged out successfully"
+}
+```
+
+- Logout from All Devices
+
+Request
+```http
+POST /api/v1/auth/logout-all
+Authorization: Bearer <accessToken>
+```
+
+Response
+```json
+{
+  "success": true,
+  "message": "Logged out from all devices"
+}
 }
 ```
 
