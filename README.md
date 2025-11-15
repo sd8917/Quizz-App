@@ -705,7 +705,7 @@ Request
 PUT /api/v1/profile/user/:userId/roles
 Authorization: Bearer <admin-token>
 {
-  "roles": ["user", "creator"]
+  "role": "creator"
 }
 ```
 
@@ -713,15 +713,108 @@ Response
 ```json
 {
   "success": true,
-  "data": { "_id": "611...", "username": "bob", "email": "bob@example.com", "roles": ["user", "creator"] }
+  "statusCode": 200,
+  "message": "User role updated successfully",
+  "data": { 
+    "_id": "611...", 
+    "username": "bob", 
+    "email": "bob@example.com", 
+    "role": "creator" 
+  },
+  "timestamp": "2025-11-16T10:30:45.123Z"
 }
 ```
 
 Role Management Notes:
 - Only admins can view all users and manage roles
-- Users can be assigned multiple roles (e.g., ["user", "creator"])
+- Valid roles: `user`, `creator`, `admin`
 - Role hierarchy: user < creator < admin
 - Creators can create channels, questions, and invite users; users can only take tests; admins have full system access
 
+## 📊 Logs API (Admin Only)
+
+The application includes a comprehensive logs management API for debugging and monitoring. See [LOGS_API_DOCUMENTATION.md](./LOGS_API_DOCUMENTATION.md) for full details.
+
+**Quick Overview:**
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/logs/files` | GET | List all log files |
+| `/api/logs` | GET | Get logs with filters |
+| `/api/logs/errors` | GET | Get recent errors |
+| `/api/logs/stats` | GET | Get statistics |
+| `/api/logs/:fileName` | DELETE | Clear logs |
+
+**Example: Get Recent Errors**
+```bash
+GET /api/logs/errors?limit=50
+Authorization: Bearer <admin-token>
+```
+
+**Example Response:**
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Recent errors retrieved successfully",
+  "data": {
+    "errors": [
+      {
+        "timestamp": "2025-11-16T10:30:45.123Z",
+        "level": "error",
+        "message": "Database connection failed",
+        "service": "blog-api",
+        "stack": "Error: Database connection failed..."
+      }
+    ],
+    "total": 50
+  },
+  "timestamp": "2025-11-16T10:31:00.000Z"
+}
+```
+
+**Features:**
+- ✅ Admin-only access
+- ✅ Pagination and filtering
+- ✅ Search logs by keyword
+- ✅ Filter by log level (error, warn, info, debug)
+- ✅ Date range filtering
+- ✅ View statistics and server health
+- ✅ Clear old logs
+- ✅ Easy-to-debug format
+
+**Quick Reference:**
+- View errors: `GET /api/logs/errors?limit=50`
+- Search logs: `GET /api/logs?search=database&level=error`
+- Get stats: `GET /api/logs/stats`
+- Clear logs: `DELETE /api/logs/combined`
+
+See [LOGS_API_QUICK_REFERENCE.md](./LOGS_API_QUICK_REFERENCE.md) for quick examples.
+
+## 📝 API Response Format
+
+All API responses follow a standardized format. See [API_RESPONSE_FORMAT.md](./API_RESPONSE_FORMAT.md) for complete documentation.
+
+**Standard Response Structure:**
+```json
+{
+  "success": boolean,
+  "statusCode": number,
+  "message": string,
+  "data": any,
+  "error": {
+    "code": string,
+    "details": any
+  },
+  "timestamp": string
+}
+```
+
+**Available HTTP Status Codes:**
+- `200 OK`, `201 CREATED`, `204 NO CONTENT`
+- `400 BAD REQUEST`, `401 UNAUTHORIZED`, `403 FORBIDDEN`
+- `404 NOT FOUND`, `409 CONFLICT`, `422 UNPROCESSABLE ENTITY`
+- `429 TOO MANY REQUESTS`, `500 INTERNAL SERVER ERROR`
+
 Notes:
-- The `authorizeRoles('super')` middleware gatekeeps the super-admin endpoints. To assign the first super user, either create the user directly in the database with `roles: ['super']` or temporarily set a user's role via the database.
+- The `authorizeRoles('admin')` middleware gatekeeps the admin endpoints. To assign the first admin user, either create the user directly in the database with `role: 'admin'` or temporarily set a user's role via the database.

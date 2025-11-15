@@ -21,4 +21,11 @@ const logger = createLogger({
   ]
 });
 
+// Stream for Morgan HTTP logging
+export const morganStream = {
+  write: (message: string) => {
+    logger.info(message.trim(), { type: 'http' });
+  }
+};
+
 export default logger;
