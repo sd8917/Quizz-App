@@ -6,7 +6,7 @@ export interface IChannel extends Document {
   owner: mongoose.Types.ObjectId;
   members: {
     user: mongoose.Types.ObjectId;
-    role: 'admin' | 'team' | 'viewer';
+    role: 'admin' | 'team' | 'creator';
   }[];
   isArchived: boolean;
   archivedAt?: Date;
@@ -43,7 +43,7 @@ const channelSchema = new Schema<IChannel>(
         },
         role: {
           type: String,
-          enum: ['admin', 'team', 'viewer'],
+          enum: ['admin', 'team', 'creator'],
           default: 'team',
         },
       },

@@ -11,7 +11,6 @@ export const channelController = {
       }
       const ownerId = user.id;
       const { name, description } = req.body;
-      console.log("channel created: ", name, description, ownerId);
       const channel = await channelService.createChannel(ownerId, name, description);
       res.status(201).json(channel);
       return;

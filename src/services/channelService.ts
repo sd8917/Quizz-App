@@ -11,13 +11,14 @@ export const channelService = {
    */
   async createChannel(ownerId: string, name: string, description?: string): Promise<IChannel> {
     const owner = await User.findById(ownerId);
+    console.log("owner: ", owner);
     if (!owner) throw new ApiError(404, 'Owner not found');
 
     const channel = await channelRepo.createChannel({
       name,
       description,
       owner: new mongoose.Types.ObjectId(ownerId),
-      members: [{ user: owner._id as mongoose.Types.ObjectId, role: 'admin' }],
+      members: [{ user: owner._id as mongoose.Types.ObjectId, role: 'creator' }],
     });
 
     return channel;
