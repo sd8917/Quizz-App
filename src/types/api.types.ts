@@ -1,8 +1,14 @@
 export interface IApiResponse<T = any> {
   success: boolean;
+  statusCode: number;
+  message: string;
   data?: T;
-  message?: string;
-  error?: string;
+  error?: {
+    code?: string;
+    details?: any;
+  };
+  timestamp: string;
+  path?: string;
 }
 
 export interface IHealthCheck {

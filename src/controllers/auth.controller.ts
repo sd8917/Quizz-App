@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
 import { ValidationError as AppValidationError, AuthenticationError as AppAuthError } from '../utils/errors';
+import { sendSuccess, sendCreated } from '../utils/helper';
 
 // Initialize auth service
 const authService = new AuthService();
@@ -14,7 +15,7 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     };
 
     const user = await authService.register(userData);
-    res.status(201).json(user);
+    sendCreated(res, user, 'User registered successfully');
   } catch (error: any) {
     // Let centralized handler format Mongoose validation errors
     if (error && error.name === 'ValidationError') {
@@ -38,7 +39,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     };
 
     const user = await authService.login(credentials);
-    res.json(user);
+    sendSuccess(res, user, 'Login successful');
   } catch (error: any) {
     if (error && error.message === 'Invalid credentials') {
       return next(new AppAuthError(error.message));
@@ -57,7 +58,7 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
     }
 
     const result = await authService.refreshAccessToken(refreshToken);
-    res.json(result);
+    sendSuccess(res, result, 'Token refreshed successfully');
   } catch (error: any) {
     if (error && (error.message === 'Invalid refresh token' || error.message === 'Refresh token expired')) {
       return next(new AppAuthError(error.message));
@@ -76,7 +77,7 @@ export const logout = async (req: Request, res: Response, next: NextFunction): P
     }
 
     await authService.logout(refreshToken);
-    res.json({ success: true, message: 'Logged out successfully' });
+    sendSuccess(res, null, 'Logged out successfully');
   } catch (error: any) {
     return next(error);
   }
@@ -91,7 +92,7 @@ export const logoutAll = async (req: Request, res: Response, next: NextFunction)
     }
 
     await authService.logoutAll(userId);
-    res.json({ success: true, message: 'Logged out from all devices' });
+    sendSuccess(res, null, 'Logged out from all devices');
   } catch (error: any) {
     return next(error);
   }

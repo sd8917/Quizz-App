@@ -2,9 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../utils/errors';
 import { ApiError } from '../utils/apiError';
 import logger from '../utils/logger';
+import { ApiResponse, HTTP_STATUS } from '../utils/helper';
 
-export default function errorHandler(err: any, _req: Request, res: Response, _next: NextFunction) {
+export default function errorHandler(err: any, req: Request, res: Response, _next: NextFunction) {
   const now = new Date().toISOString();
+  
   // Mongoose validation error
   if (err && err.name === 'ValidationError' && err.errors) {
     const errors: Record<string, string> = {};
@@ -12,38 +14,84 @@ export default function errorHandler(err: any, _req: Request, res: Response, _ne
       errors[key] = err.errors[key].message;
     });
 
-    return res.status(400).json({
+    const response: ApiResponse = {
       success: false,
+      statusCode: HTTP_STATUS.UNPROCESSABLE_ENTITY,
       message: 'Validation failed',
-      errors,
-    });
+      error: {
+        code: 'VALIDATION_ERROR',
+        details: errors,
+      },
+      timestamp: now,
+      path: req.path,
+    };
+
+    return res.status(HTTP_STATUS.UNPROCESSABLE_ENTITY).json(response);
   }
 
   // Mongo duplicate key error (11000)
   if (err && (err.code === 11000 || err.code === 11001)) {
     const keyValues = err.keyValue || {};
     const fields = Object.keys(keyValues);
-    return res.status(409).json({
+    
+    const response: ApiResponse = {
       success: false,
+      statusCode: HTTP_STATUS.CONFLICT,
       message: `Duplicate value for field(s): ${fields.join(', ')}`,
-      fields: keyValues,
-    });
+      error: {
+        code: 'DUPLICATE_KEY',
+        details: keyValues,
+      },
+      timestamp: now,
+      path: req.path,
+    };
+
+    return res.status(HTTP_STATUS.CONFLICT).json(response);
   }
 
   // App-specific errors
   if (err instanceof AppError || err instanceof ApiError) {
-    const response: any = {
+    const statusCode = err.statusCode || HTTP_STATUS.INTERNAL_SERVER_ERROR;
+    
+    const response: ApiResponse = {
       success: false,
+      statusCode,
       message: err.message,
+      error: {
+        code: err.name || 'APPLICATION_ERROR',
+      },
+      timestamp: now,
+      path: req.path,
     };
+
     if (process.env.NODE_ENV === 'development') {
-      response.stack = err.stack;
-      response.error = err;
+      response.error!.details = {
+        stack: err.stack,
+      };
     }
-    return res.status(err.statusCode || 500).json(response);
+
+    return res.status(statusCode).json(response);
   }
 
   // Fallback: log all server errors with Winston
   logger.error(`[${now}] Server Error:`, err);
-  return res.status(500).json({ success: false, message: 'Internal server error' });
+  
+  const response: ApiResponse = {
+    success: false,
+    statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error',
+    error: {
+      code: 'INTERNAL_ERROR',
+    },
+    timestamp: now,
+    path: req.path,
+  };
+
+  if (process.env.NODE_ENV === 'development' && err.stack) {
+    response.error!.details = {
+      stack: err.stack,
+    };
+  }
+
+  return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(response);
 }
