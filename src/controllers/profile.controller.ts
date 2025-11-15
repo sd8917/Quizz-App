@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import ProfileService from '../services/profile.service';
+import { sendSuccess, sendBadRequest, sendNotFound } from '../utils/helper';
 
 export class ProfileController {
   private profileService = ProfileService;
@@ -8,9 +9,9 @@ export class ProfileController {
     try {
       const userId = req.user._id || req.user.id;
       const data = await this.profileService.getProfile(userId);
-      res.json({ success: true, data });
+      sendSuccess(res, data, 'Profile retrieved successfully');
     } catch (err: any) {
-      res.status(400).json({ success: false, message: err.message });
+      sendBadRequest(res, err.message);
     }
   };
 
@@ -19,9 +20,9 @@ export class ProfileController {
       const userId = req.user._id || req.user.id;
       const updates = req.body;
       const data = await this.profileService.updateProfile(userId, updates);
-      res.json({ success: true, data });
+      sendSuccess(res, data, 'Profile updated successfully');
     } catch (err: any) {
-      res.status(400).json({ success: false, message: err.message });
+      sendBadRequest(res, err.message);
     }
   };
 
@@ -29,20 +30,46 @@ export class ProfileController {
   listUsers = async (_req: Request, res: Response) => {
     try {
       const data = await this.profileService.getAllUsers();
-      res.json({ success: true, data });
+      sendSuccess(res, data, 'Users retrieved successfully');
     } catch (err: any) {
-      res.status(400).json({ success: false, message: err.message });
+      sendBadRequest(res, err.message);
     }
   };
 
   updateUserRoles = async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
-      const { roles } = req.body;
-      const data = await this.profileService.updateUserRoles(userId, roles);
-      res.json({ success: true, data });
+      const { role } = req.body;
+
+      // Validate input
+      if (!userId) {
+        return sendBadRequest(res, 'User ID is required');
+      }
+
+      if (!role) {
+        return sendBadRequest(res, 'Role is required', { 
+          allowedRoles: ['user', 'creator', 'admin'] 
+        });
+      }
+
+      // Validate role value
+      const validRoles = ['user', 'creator', 'admin'];
+      if (!validRoles.includes(role)) {
+        return sendBadRequest(res, 'Invalid role specified', { 
+          provided: role,
+          allowedRoles: validRoles 
+        });
+      }
+
+      const data = await this.profileService.updateUserRoles(userId, role);
+      
+      if (!data) {
+        return sendNotFound(res, 'User not found');
+      }
+
+      sendSuccess(res, data, 'User role updated successfully');
     } catch (err: any) {
-      res.status(400).json({ success: false, message: err.message });
+      sendBadRequest(res, err.message);
     }
   };
 }
