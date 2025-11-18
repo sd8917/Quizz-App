@@ -791,6 +791,87 @@ Authorization: Bearer <admin-token>
 
 See [LOGS_API_QUICK_REFERENCE.md](./LOGS_API_QUICK_REFERENCE.md) for quick examples.
 
+## 📚 API Documentation (Swagger)
+
+The API includes **complete interactive Swagger/OpenAPI 3.0 documentation** publicly accessible for easy testing and integration.
+
+### Quick Access
+
+**Access Swagger UI:**
+```
+http://localhost:3000/api-docs
+```
+
+**Features:**
+
+✅ **Interactive API documentation**  
+✅ **Publicly accessible**  
+✅ **Try it out functionality**  
+✅ **Complete request/response examples**  
+✅ **All endpoints documented**  
+✅ **JWT authentication support**  
+✅ **Organized by tags**  
+✅ **OpenAPI 3.0 specification**  
+
+### Getting Started
+
+1. **Start server:**
+   ```bash
+   npm run dev
+   ```
+
+2. **Open Swagger UI:**
+   ```
+   http://localhost:3000/api-docs
+   ```
+
+3. **Test endpoints:**
+   - Click any endpoint
+   - Click "Try it out"
+   - Fill in parameters
+   - Click "Execute"
+
+### Authentication in Swagger
+
+**For Protected Endpoints:**
+
+1. **Login or Register** to get a JWT token
+2. Click the **"Authorize" button** 🔓 (top right)
+3. Enter: `Bearer <your_access_token>`
+4. Click **"Authorize"**
+5. Now test all protected endpoints!
+
+### Example Usage
+
+```bash
+# 1. Access documentation
+open http://localhost:3000/api-docs
+
+# 2. Use POST /api/register or POST /api/login
+# 3. Copy the accessToken from response
+# 4. Click "Authorize" button in Swagger
+# 5. Enter: Bearer <your_token>
+# 6. Test protected endpoints using "Try it out"
+```
+
+### Available Documentation
+
+- **Swagger UI**: `http://localhost:3000/api-docs`
+- **OpenAPI JSON**: `http://localhost:3000/api-docs.json`
+- **Complete Guide**: [SWAGGER_DOCUMENTATION.md](./SWAGGER_DOCUMENTATION.md)
+
+### Documented Endpoints
+
+- 🔐 **Authentication** - Register, login, token refresh, logout
+- 👤 **Profile** - User profile and role management
+- 📊 **Logs** - Server logs and monitoring (Admin only)
+- 💚 **Health** - System health checks
+- 📝 **Channels** - Channel management
+- 🎯 **Quizzes** - Quiz operations
+- 🏆 **Attempts** - Quiz attempts and scoring
+
+For complete documentation details, see [SWAGGER_DOCUMENTATION.md](./SWAGGER_DOCUMENTATION.md).
+
 ## 📝 API Response Format
 
 All API responses follow a standardized format. See [API_RESPONSE_FORMAT.md](./API_RESPONSE_FORMAT.md) for complete documentation.

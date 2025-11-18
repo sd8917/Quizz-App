@@ -8,12 +8,176 @@ const router = Router();
 
 router.use(protect);
 
+/**
+ * @openapi
+ * /api/profile:
+ *   get:
+ *     tags:
+ *       - Profile
+ *     summary: Get current user profile
+ *     description: Retrieve the profile of the authenticated user
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/User'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
 // User profile
 router.get('/', profileController.getMe);
+
+/**
+ * @openapi
+ * /api/profile:
+ *   put:
+ *     tags:
+ *       - Profile
+ *     summary: Update current user profile
+ *     description: Update the authenticated user's profile information
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: newusername
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: newemail@example.com
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Invalid input data
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
 router.put('/', profileController.updateMe);
 
+/**
+ * @openapi
+ * /api/profile/users:
+ *   get:
+ *     tags:
+ *       - Profile
+ *     summary: Get all users (Admin only)
+ *     description: Retrieve a list of all users in the system
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Users retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/User'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ */
 // Admin only routes with strict rate limiting
 router.get('/users', authorizeRoles('admin'), profileController.listUsers);
+
+/**
+ * @openapi
+ * /api/profile/user/{userId}/roles:
+ *   put:
+ *     tags:
+ *       - Profile
+ *     summary: Update user role (Admin only)
+ *     description: Update a user's role. Requires admin privileges. Rate limited to 10 requests per hour.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - role
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum: [user, creator, admin]
+ *                 example: creator
+ *                 description: New role for the user
+ *     responses:
+ *       200:
+ *         description: User role updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Invalid role or user ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               statusCode: 400
+ *               message: Invalid role specified
+ *               error:
+ *                 code: BAD_REQUEST
+ *                 details:
+ *                   provided: superuser
+ *                   allowedRoles: [user, creator, admin]
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ *       404:
+ *         description: User not found
+ *       429:
+ *         description: Too many requests (rate limit: 10 per hour)
+ */
 router.put('/user/:userId/roles', strictLimiter, authorizeRoles('admin'), profileController.updateUserRoles);
 
 export { router as profileRoutes };

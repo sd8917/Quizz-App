@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './config/swagger';
 import authRoutes from './routes/v1/auth.routes';
 import channelRoutes from './routes/v1/channel.routes';
 import { quizRoutes } from './routes/v1/quiz.routes';
@@ -28,12 +30,78 @@ app.use(morgan('combined', { stream: morganStream }));
 // Apply rate limiting to all API routes
 app.use('/api/', apiLimiter);
 
+// --- Swagger API Documentation (Public Access) ---
+/**
+ * @openapi
+ * /:
+ *   get:
+ *     tags:
+ *       - Health
+ *     summary: Root endpoint
+ *     description: Welcome message for the API
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: 🧠 Welcome to the Blogging/Quiz API Service
+ */
+app.use(
+  '/api-docs',
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    customSiteTitle: 'Quiz App API Documentation',
+    customCss: '.swagger-ui .topbar { display: none }',
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+      filter: true,
+      tryItOutEnabled: true
+    }
+  })
+);
+
+// Swagger JSON endpoint
+app.get('/api-docs.json', (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
 // --- Healthcheck ---
 app.get('/', (_req, res) => {
   logger.info('Root endpoint accessed');
   res.json({ message: '🧠 Welcome to the Blogging/Quiz API Service' });
 });
 
+/**
+ * @openapi
+ * /health:
+ *   get:
+ *     tags:
+ *       - Health
+ *     summary: Health check endpoint
+ *     description: Check the health and status of the API server
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Server is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/HealthCheck'
+ *       503:
+ *         description: Service unavailable (database not connected)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/HealthCheck'
+ */
 // Health check endpoint
 app.get('/health', (_req, res) => {
   const dbState = mongoose.connection.readyState; // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
