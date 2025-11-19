@@ -33,6 +33,7 @@ export class AuthService {
       _id: (user._id as string).toString(),
       username: user.username,
       email: user.email,
+      role: user.roles[0],
       ...(accessToken && { accessToken }),
       ...(refreshToken && { refreshToken })
     };
