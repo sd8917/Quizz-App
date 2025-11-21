@@ -13,6 +13,8 @@ router.post('/', channelController.createChannel);
 
 // Get channel by ID
 router.get('/:channelId', channelController.getChannel);
+// Update channel (name, description)
+router.put('/:channelId', channelController.updateChannel);
 // Invite user to channel
 router.post('/:channelId/invite', channelController.inviteUser);
 // // Archive old channels (admin only)

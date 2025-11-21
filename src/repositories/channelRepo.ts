@@ -88,6 +88,23 @@ export const channelRepo = {
   },
 
   /**
+   * Update channel details (name, description)
+   */
+  async updateChannel(
+    channelId: string,
+    updates: { name?: string; description?: string }
+  ): Promise<IChannel | null> {
+    return Channel.findByIdAndUpdate(
+      channelId,
+      { $set: updates },
+      { new: true, runValidators: true }
+    )
+      .populate('owner', 'name email')
+      .populate('members.user', 'name email')
+      .exec();
+  },
+
+  /**
    * Archive a channel
    */
   async archiveChannel(channelId: string): Promise<IChannel | null> {

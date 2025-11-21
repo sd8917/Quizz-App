@@ -80,6 +80,37 @@ export const channelController = {
     }
   },
 
+  async updateChannel(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { channelId } = req.params;
+      const userId = req.user.id;
+      const { name, description } = req.body;
+
+      // Validate at least one field is provided
+      if (!name && !description) {
+        return res.status(400).json({
+          success: false,
+          message: 'Please provide at least one field to update (name or description)'
+        });
+      }
+
+      const updates: { name?: string; description?: string } = {};
+      if (name) updates.name = name;
+      if (description !== undefined) updates.description = description;
+
+      const updatedChannel = await channelService.updateChannel(channelId, userId, updates);
+      
+      res.json({
+        success: true,
+        message: 'Channel updated successfully',
+        data: updatedChannel
+      });
+      return;
+    } catch (err) {
+      return next(err);
+    }
+  },
+
   // async archiveOldChannels(req: Request, res: Response, next: NextFunction) {
   //   try {
   //     const { days } = req.query;

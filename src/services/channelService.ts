@@ -61,6 +61,33 @@ export const channelService = {
   },
 
   /**
+   * Update channel details (name, description)
+   */
+  async updateChannel(
+    channelId: string,
+    userId: string,
+    updates: { name?: string; description?: string }
+  ): Promise<IChannel> {
+    const channel = await channelRepo.getChannelById(channelId);
+    if (!channel) throw new ApiError(404, 'Channel not found');
+
+    // Only owner or admin members can update channel
+    const isOwner = channel.owner._id.toString() === userId;
+    const isAdmin = channel.members.some(
+      m => m.user._id.toString() === userId && m.role === 'admin'
+    );
+
+    if (!isOwner && !isAdmin) {
+      throw new ApiError(403, 'Only channel owner or admins can update channel details');
+    }
+
+    const updatedChannel = await channelRepo.updateChannel(channelId, updates);
+    if (!updatedChannel) throw new ApiError(500, 'Failed to update channel');
+
+    return updatedChannel;
+  },
+
+  /**
    * Archive old channels after N days
    */
 //   async archiveOldChannels(daysOld: number) {
