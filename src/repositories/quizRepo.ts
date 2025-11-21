@@ -14,11 +14,7 @@ export class QuizRepository {
     }));
     return Question.insertMany(formatted);
   }
-
-  async getQuestionsForChannel(channelId: string) {
-    return Question.find({ channelId });
-  }
-
+  
   async getQuestionsForTest(channelId: string) {
     // Hide answers (isCorrect flag) from users
     return Question.find({ channelId }).select("-options.isCorrect -createdBy");
