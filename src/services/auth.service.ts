@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { IUser, ILoginRequest, IRegisterRequest, IUserResponse } from '../types';
 import User from '../models/user.model';
 import { RefreshToken } from '../models/refreshToken.model';
+import { sendWelcomeEmail } from '../utils/mailer';
 
 export class AuthService {
   // Generate access token (5 minutes)
@@ -58,6 +59,11 @@ export class AuthService {
       email,
       password,
       roles: ['user'],
+    });
+
+    // Send welcome email asynchronously (don't block registration)
+    sendWelcomeEmail(user.email, user.username).catch(err => {
+      console.error('Failed to send welcome email:', err);
     });
 
     const accessToken = AuthService.generateAccessToken((user._id as string).toString());
