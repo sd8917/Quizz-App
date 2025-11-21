@@ -46,9 +46,22 @@ export const channelController = {
       }
       const inviterId = user.id;
       const { channelId } = req.params;
-      const { inviteeId, role } = req.body;
-      const updated = await channelService.inviteUser(channelId, inviterId, inviteeId, role);
-      res.status(200).json(updated);
+      const { email, role } = req.body;
+      
+      // Validate email is provided
+      if (!email) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Email address is required' 
+        });
+      }
+      
+      const updated = await channelService.inviteUserByEmail(channelId, inviterId, email, role);
+      res.status(200).json({
+        success: true,
+        message: 'User invited successfully',
+        data: updated
+      });
       return;
     } catch (err) {
       return next(err);

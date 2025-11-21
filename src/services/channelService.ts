@@ -45,18 +45,40 @@ export const channelService = {
   },
 
   /**
-   * Invite a user to a channel
+   * Invite a user to a channel by email
    */
-  async inviteUser(channelId: string, inviterId: string, inviteeId: string, role: 'team' | 'viewer') {
+  async inviteUserByEmail(channelId: string, inviterId: string, email: string, role: 'team' | 'viewer') {
+    // Find user by email
+    const invitee = await User.findOne({ email });
+    if (!invitee) {
+      throw new ApiError(404, 'User with this email is not registered');
+    }
+
+    // Check if user is active
+    if (!invitee.isActive) {
+      throw new ApiError(403, 'Cannot invite inactive user. User account is deactivated.');
+    }
+
     const channel = await channelRepo.getChannelById(channelId);
     if (!channel) throw new ApiError(404, 'Channel not found');
 
-    const inviter = channel.members.find(m => m.user._id.toString() === inviterId);
+    // Check if inviter has permission (must be owner or admin)
+    const isOwner = channel.owner._id.toString() === inviterId;
+    const inviterMember = channel.members.find(m => m.user._id.toString() === inviterId);
+    const isAdmin = inviterMember && inviterMember.role === 'admin';
     
-    if (!inviter || inviter.role !== 'admin')
-      throw new ApiError(403, 'Only admins can invite users');
+    if (!isOwner && !isAdmin) {
+      throw new ApiError(403, 'Only channel owner or admins can invite users');
+    }
 
-    return await channelRepo.addMember(channelId, new mongoose.Types.ObjectId(inviteeId), role);
+    // Check if user is already a member
+    const inviteeIdStr = (invitee._id as any).toString();
+    const isAlreadyMember = channel.members.some(m => m.user._id.toString() === inviteeIdStr);
+    if (isAlreadyMember) {
+      throw new ApiError(400, 'User is already a member of this channel');
+    }
+
+    return await channelRepo.addMember(channelId, invitee._id as mongoose.Types.ObjectId, role);
   },
 
   /**
