@@ -6,7 +6,12 @@ export interface IUser extends Document {
   password: string;
   roles: string[];
   createdAt: Date;
+  isActive: boolean;
+  lastLoginAt?: Date;
+  lastActiveAt?: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
+  getActiveStatus(): string;
+  isOnline(): boolean;
 }
 
 export interface IUserResponse {
@@ -16,6 +21,9 @@ export interface IUserResponse {
   role: string;
   accessToken?: string;
   refreshToken?: string;
+  lastLoginAt?: Date;
+  lastActiveAt?: Date;
+  activeStatus?: string;
 }
 
 export interface ILoginRequest {

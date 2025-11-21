@@ -35,7 +35,10 @@ export class AuthService {
       email: user.email,
       role: user.roles[0],
       ...(accessToken && { accessToken }),
-      ...(refreshToken && { refreshToken })
+      ...(refreshToken && { refreshToken }),
+      lastLoginAt: user.lastLoginAt,
+      lastActiveAt: user.lastActiveAt,
+      activeStatus: user.getActiveStatus()
     };
   }
 
@@ -76,6 +79,12 @@ export class AuthService {
     if (!isMatch) {
       throw new Error('Invalid credentials');
     }
+
+    // Update login timestamp and last active
+    const now = new Date();
+    user.lastLoginAt = now;
+    user.lastActiveAt = now;
+    await user.save();
 
     const accessToken = AuthService.generateAccessToken((user._id as string).toString());
     const refreshToken = await AuthService.generateRefreshToken((user._id as string).toString());

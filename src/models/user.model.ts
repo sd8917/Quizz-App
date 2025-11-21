@@ -26,7 +26,10 @@ const UserSchema = new Schema<IUser>({
         minlength: [6, 'Password must be at least 6 characters']
     },
     roles: [{ type: String }],
-    createdAt: { type: Date, default: Date.now }
+    isActive: { type: Boolean, default: true },
+    createdAt: { type: Date, default: Date.now },
+    lastLoginAt: { type: Date },
+    lastActiveAt: { type: Date }
 });
 
 // Hash password before saving
@@ -45,6 +48,32 @@ UserSchema.pre('save', async function (next) {
 // a menthod on user model to compare password
 UserSchema.methods.comparePassword = function (password: string) {
     return bcrypt.compare(password, this.password);
+};
+
+// Check if user is currently online (active within last 5 minutes)
+UserSchema.methods.isOnline = function (): boolean {
+    if (!this.lastActiveAt) return false;
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    return this.lastActiveAt > fiveMinutesAgo;
+};
+
+// Get human-readable active status
+UserSchema.methods.getActiveStatus = function (): string {
+    if (!this.lastActiveAt) return 'Never active';
+    
+    const now = Date.now();
+    const lastActive = this.lastActiveAt.getTime();
+    const diffMs = now - lastActive;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 5) return 'Online';
+    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    
+    return this.lastActiveAt.toLocaleDateString();
 };
 
 

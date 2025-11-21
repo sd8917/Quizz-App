@@ -3,8 +3,26 @@ import User from '../models/user.model';
 import { IUser } from '../types/user.types';
 
 export class ProfileService {
+  // Helper to format user with activity information
+  private formatUserWithActivity(user: IUser) {
+    return {
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      roles: user.roles,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+      lastLoginAt: user.lastLoginAt,
+      lastActiveAt: user.lastActiveAt,
+      activeStatus: user.getActiveStatus(),
+      isOnline: user.isOnline()
+    };
+  }
+
   async getProfile(userId: string) {
-    return User.findById(userId).select('-password');
+    const user = await User.findById(userId).select('-password');
+    if (!user) throw new Error('User not found');
+    return this.formatUserWithActivity(user);
   }
 
   async updateProfile(userId: string, data: Partial<IUser>) {
@@ -18,12 +36,15 @@ export class ProfileService {
 
     await user.save();
     sendChannelInviteEmail(user.email, "Password change successful");
-    return User.findById(userId).select('-password');
+    const updatedUser = await User.findById(userId).select('-password');
+    if (!updatedUser) throw new Error('User not found after update');
+    return this.formatUserWithActivity(updatedUser);
   }
 
   // Admin / super actions
   async getAllUsers() {
-    return User.find().select('-password');
+    const users = await User.find().select('-password');
+    return users.map(user => this.formatUserWithActivity(user));
   }
 
   async updateUserRoles(targetUserId: string, roles: string[]) {
@@ -31,7 +52,9 @@ export class ProfileService {
     if (!user) throw new Error('User not found');
     user.roles = roles;
     await user.save();
-    return User.findById(targetUserId).select('-password');
+    const updatedUser = await User.findById(targetUserId).select('-password');
+    if (!updatedUser) throw new Error('User not found after update');
+    return this.formatUserWithActivity(updatedUser);
   }
 }
 
