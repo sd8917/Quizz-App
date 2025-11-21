@@ -42,8 +42,12 @@ export class ProfileService {
   }
 
   // Admin / super actions
-  async getAllUsers() {
-    const users = await User.find().select('-password');
+  async getAllUsers(isActive?: boolean) {
+    const filter: any = {};
+    if (isActive !== undefined) {
+      filter.isActive = isActive;
+    }
+    const users = await User.find(filter).select('-password');
     return users.map(user => this.formatUserWithActivity(user));
   }
 
@@ -51,6 +55,16 @@ export class ProfileService {
     const user = await User.findById(targetUserId);
     if (!user) throw new Error('User not found');
     user.roles = roles;
+    await user.save();
+    const updatedUser = await User.findById(targetUserId).select('-password');
+    if (!updatedUser) throw new Error('User not found after update');
+    return this.formatUserWithActivity(updatedUser);
+  }
+
+  async updateUserStatus(targetUserId: string, isActive: boolean) {
+    const user = await User.findById(targetUserId);
+    if (!user) throw new Error('User not found');
+    user.isActive = isActive;
     await user.save();
     const updatedUser = await User.findById(targetUserId).select('-password');
     if (!updatedUser) throw new Error('User not found after update');

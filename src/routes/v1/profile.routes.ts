@@ -86,9 +86,17 @@ router.put('/', profileController.updateMe);
  *     tags:
  *       - Profile
  *     summary: Get all users (Admin only)
- *     description: Retrieve a list of all users in the system
+ *     description: Retrieve a list of all users in the system. Optionally filter by active status.
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: isActive
+ *         schema:
+ *           type: string
+ *           enum: [true, false]
+ *         description: Filter users by active status ("true" for active, "false" for inactive)
+ *         example: true
  *     responses:
  *       200:
  *         description: Users retrieved successfully
@@ -103,6 +111,8 @@ router.put('/', profileController.updateMe);
  *                       type: array
  *                       items:
  *                         $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Invalid query parameter
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
@@ -179,6 +189,73 @@ router.get('/users', authorizeRoles('admin'), profileController.listUsers);
  *         description: Too many requests (rate limit: 10 per hour)
  */
 router.put('/user/:userId/roles', strictLimiter, authorizeRoles('admin'), profileController.updateUserRoles);
+
+/**
+ * @openapi
+ * /api/profile/user/{userId}/status:
+ *   put:
+ *     tags:
+ *       - Profile
+ *     summary: Activate or deactivate user (Admin only)
+ *     description: Update a user's active status. Requires admin privileges. Rate limited to 10 requests per hour.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - isActive
+ *             properties:
+ *               isActive:
+ *                 type: boolean
+ *                 example: false
+ *                 description: Set to true to activate user, false to deactivate
+ *     responses:
+ *       200:
+ *         description: User status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Invalid request body
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               statusCode: 400
+ *               message: isActive field is required and must be a boolean
+ *               error:
+ *                 code: BAD_REQUEST
+ *                 details:
+ *                   expected: 'boolean (true or false)'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ *       404:
+ *         description: User not found
+ *       429:
+ *         description: Too many requests - rate limit 10 per hour
+ */
+router.put('/user/:userId/status', strictLimiter, authorizeRoles('admin'), profileController.toggleUserStatus);
 
 export { router as profileRoutes };
     

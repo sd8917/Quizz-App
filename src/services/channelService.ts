@@ -11,7 +11,6 @@ export const channelService = {
    */
   async createChannel(ownerId: string, name: string, description?: string): Promise<IChannel> {
     const owner = await User.findById(ownerId);
-    console.log("owner: ", owner);
     if (!owner) throw new ApiError(404, 'Owner not found');
 
     const channel = await channelRepo.createChannel({

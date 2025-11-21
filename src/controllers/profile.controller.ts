@@ -27,9 +27,21 @@ export class ProfileController {
   };
 
   // Super admin routes
-  listUsers = async (_req: Request, res: Response) => {
+  listUsers = async (req: Request, res: Response) => {
     try {
-      const data = await this.profileService.getAllUsers();
+      const { isActive } = req.query;
+      
+      // Parse isActive query parameter
+      let isActiveFilter: boolean | undefined;
+      if (isActive !== undefined) {
+        if (isActive === 'true') isActiveFilter = true;
+        else if (isActive === 'false') isActiveFilter = false;
+        else {
+          return sendBadRequest(res, 'isActive must be "true" or "false"');
+        }
+      }
+      
+      const data = await this.profileService.getAllUsers(isActiveFilter);
       sendSuccess(res, data, 'Users retrieved successfully');
     } catch (err: any) {
       sendBadRequest(res, err.message);
@@ -68,6 +80,35 @@ export class ProfileController {
       }
 
       sendSuccess(res, data, 'User role updated successfully');
+    } catch (err: any) {
+      sendBadRequest(res, err.message);
+    }
+  };
+
+  toggleUserStatus = async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { isActive } = req.body;
+
+      // Validate input
+      if (!userId) {
+        return sendBadRequest(res, 'User ID is required');
+      }
+
+      if (isActive === undefined || typeof isActive !== 'boolean') {
+        return sendBadRequest(res, 'isActive field is required and must be a boolean', {
+          expected: 'boolean (true or false)'
+        });
+      }
+
+      const data = await this.profileService.updateUserStatus(userId, isActive);
+      
+      if (!data) {
+        return sendNotFound(res, 'User not found');
+      }
+
+      const action = isActive ? 'activated' : 'deactivated';
+      sendSuccess(res, data, `User ${action} successfully`);
     } catch (err: any) {
       sendBadRequest(res, err.message);
     }
