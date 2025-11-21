@@ -68,4 +68,19 @@ const channelSchema = new Schema<IChannel>(
 // channelSchema.index({ 'members.user': 1 });
 // channelSchema.index({ isArchived: 1 });
 
+// Cascade delete: Remove all questions associated with this channel when channel is deleted
+channelSchema.pre('deleteOne', { document: true, query: false }, async function() {
+  const channelId = this._id;
+  // Delete all questions belonging to this channel
+  await mongoose.model('Question').deleteMany({ channelId });
+});
+
+channelSchema.pre('findOneAndDelete', async function() {
+  const channelId = this.getQuery()._id;
+  if (channelId) {
+    // Delete all questions belonging to this channel
+    await mongoose.model('Question').deleteMany({ channelId });
+  }
+});
+
 export const Channel = mongoose.model<IChannel>('Channel', channelSchema);

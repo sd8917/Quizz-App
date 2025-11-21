@@ -75,8 +75,12 @@ export const channelController = {
         return res.status(403).json({ success: false, message: 'Only admins can delete channels' });
       }
       const { channelId } = req.params;
-      const deletedCount = await channelService.deleteChannel(channelId);
-      res.json({ success: true, deleted: deletedCount });
+      const deleted = await channelService.deleteChannel(channelId);
+      res.json({ 
+        success: true, 
+        message: 'Channel and all associated questions deleted successfully',
+        deleted 
+      });
       return;
     } catch (err) {
       return next(err);

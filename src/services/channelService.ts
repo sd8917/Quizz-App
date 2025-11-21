@@ -121,10 +121,21 @@ export const channelService = {
 //   },
 
   /**
-   * Delete a channel permanently (super only)
+   * Delete a channel permanently (admin only)
+   * This will also delete all questions associated with the channel
    */
-  async deleteChannel(_channelId: string) {
-    return await channelRepo.deleteArchivedChannels();
+  async deleteChannel(channelId: string) {
+    const channel = await channelRepo.getChannelById(channelId);
+    if (!channel) throw new ApiError(404, 'Channel not found');
+
+    // Delete the channel (cascade will handle questions)
+    const deleted = await channelRepo.deleteChannelById(channelId);
+    
+    if (!deleted) {
+      throw new ApiError(500, 'Failed to delete channel');
+    }
+
+    return deleted;
   },
 
   /**

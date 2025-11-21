@@ -131,4 +131,13 @@ export const channelRepo = {
     const res = await Channel.deleteMany({ isArchived: true }).exec();
     return res.deletedCount || 0;
   },
+
+  /**
+   * Delete a specific channel by ID
+   * This will trigger cascade delete for all associated questions
+   */
+  async deleteChannelById(channelId: string): Promise<boolean> {
+    const result = await Channel.findByIdAndDelete(channelId).exec();
+    return result !== null;
+  },
 };
