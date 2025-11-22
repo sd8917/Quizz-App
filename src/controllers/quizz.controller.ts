@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { QuizService } from "../services/quiz.service";
-import { sendSuccess, sendCreated } from '../utils/helper';
+import { sendSuccess, sendCreated, sendForbidden } from '../utils/helper';
+import { channelService } from '../services/channelService';
 
 export class QuizController {
   private quizService = new QuizService();
@@ -41,14 +42,23 @@ export class QuizController {
   getChannelQuestionsForUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { channelId } = req.params;
+      const userId = req.user!.id;
+
+      // Check if user is member of channel
+      const channel = await channelService.getChannel(channelId, userId);
+
+      const isMember = channel.members.some(m => m.user._id.toString() === userId);
+      
+      if (!isMember) {
+        return sendForbidden(res, 'You must be a member of this channel to view questions');
+      }
+      
       const questions = await this.quizService.getChannelQuestionsForUser(channelId);
       sendSuccess(res, questions, 'Questions retrieved successfully');
     } catch (err) {
       next(err);
     }
-  };
-
-  // ✅ User submits quiz
+  };  // ✅ User submits quiz
   submitQuiz = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { channelId } = req.params;
