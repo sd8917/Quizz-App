@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { QuizController } from "../../controllers/quizz.controller";
 import { protect } from "../../middleware/auth.middleware";
+import authorizeRoles from '../../middleware/role.middleware';
 
 const router = Router();
 const quizController = new QuizController();
@@ -8,11 +9,12 @@ const quizController = new QuizController();
 router.use(protect);
 
 // ADMIN ROUTES
-router.post("/channel/:channelId", quizController.adminCreateQuestion);
-router.post("/channel/:channelId/bulk", quizController.adminBulkCreateQuestions);
+router.post("/channel/:channelId",authorizeRoles('creator', 'admin'),  quizController.adminCreateQuestion);
+router.post("/channel/:channelId/bulk", authorizeRoles('creator', 'admin'), quizController.adminBulkCreateQuestions);
+
+router.get("/channel/:channelId/questions", quizController.getChannelQuestionsForUser);
 
 // USER ROUTES
-router.get("/channel/:channelId/questions", quizController.getChannelQuestionsForUser);
-router.post("/channel/:channelId/submit", quizController.submitQuiz);
+router.post("/channel/:channelId/submit",authorizeRoles('user'), quizController.submitQuiz);
 
 export { router as quizRoutes };
