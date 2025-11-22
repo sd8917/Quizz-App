@@ -23,6 +23,6 @@ router.post('/:channelId/invite', authorizeRoles('creator', 'admin'), channelCon
 // Delete channel (admin only)
 router.delete('/:channelId', authorizeRoles('admin', 'creator'), channelController.deleteChannel);
 // List all channels for the current user/admin
-router.get('/', channelController.listUserChannels);
+router.get('/',  authorizeRoles('creator'), channelController.listUserChannels);
 
 export default router;

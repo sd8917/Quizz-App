@@ -31,13 +31,11 @@ export const channelService = {
     if (!channel) throw new ApiError(404, 'Channel not found');
 
     // Check member access
-    const isMember = channel.members.some(m => m.user.toString() === userId);
-    const isOwner = channel.owner.toString() === userId;
-
+    const isOwner = channel.owner._id.toString() === userId;
     // Allow access if:
     // 1. User is owner
     // 2. User is a member
-    if (!isOwner && !isMember) {
+    if (!isOwner) {
       throw new ApiError(403, 'Access denied - Must be a member or owner of the channel');
     }
 
