@@ -124,9 +124,20 @@ export const channelService = {
    * Delete a channel permanently (admin only)
    * This will also delete all questions associated with the channel
    */
-  async deleteChannel(channelId: string) {
+  async deleteChannel(channelId: string, user: any) {
     const channel = await channelRepo.getChannelById(channelId);
+    // check the channel ownership
     if (!channel) throw new ApiError(404, 'Channel not found');
+
+     // Only owner or admin members can update channel
+    const isOwner = channel.owner._id.toString() === user.id;
+    const isAdmin = channel.members.some(
+      m => m.user._id.toString() === user.id && m.role === 'admin'
+    );
+
+    if (!isOwner && !isAdmin) {
+      throw new ApiError(403, 'Only channel owner or admins can update channel details');
+    }
 
     // Delete the channel (cascade will handle questions)
     const deleted = await channelRepo.deleteChannelById(channelId);

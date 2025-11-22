@@ -1,18 +1,24 @@
 import { Request, Response, NextFunction } from 'express';
 import { channelService } from '../services/channelService';
+import { 
+  sendSuccess, 
+  sendCreated, 
+  sendBadRequest
+} from '../utils/helper';
 
 export const channelController = {
   async createChannel(req: Request, res: Response, next: NextFunction) {
     try {
       const user = req.user;
-      // Only creator or admin can create channels
-      if (!user.roles || (!user.roles.includes('creator') && !user.roles.includes('admin'))) {
-        return res.status(403).json({ success: false, message: 'Only creators and admins can create channels' });
-      }
       const ownerId = user.id;
       const { name, description } = req.body;
+      
+      if (!name) {
+        return sendBadRequest(res, 'Channel name is required');
+      }
+      
       const channel = await channelService.createChannel(ownerId, name, description);
-      res.status(201).json(channel);
+      sendCreated(res, channel, 'Channel created successfully');
       return;
     } catch (err) {
       return next(err);
@@ -24,14 +30,14 @@ export const channelController = {
       const { channelId } = req.params;
       const userId = req.user.id;
       const channel = await channelService.getChannel(channelId, userId);
-      res.json({
-        success: true,
-        data: {
-          channel,
-          userRole: channel.owner.toString() === userId ? 'owner' : 
-                    channel.members.find(m => m.user.toString() === userId)?.role || 'none'
-        }
-      });
+      
+      const data = {
+        channel,
+        userRole: channel.owner.toString() === userId ? 'owner' : 
+                  channel.members.find(m => m.user.toString() === userId)?.role || 'none'
+      };
+      
+      sendSuccess(res, data, 'Channel retrieved successfully');
     } catch (err) {
       next(err);
     }
@@ -40,28 +46,17 @@ export const channelController = {
   async inviteUser(req: Request, res: Response, next: NextFunction) {
     try {
       const user = req.user;
-      // Only creator or admin can invite users
-      if (!user.roles || (!user.roles.includes('creator') && !user.roles.includes('admin'))) {
-        return res.status(403).json({ success: false, message: 'Only creators and admins can invite users' });
-      }
       const inviterId = user.id;
       const { channelId } = req.params;
       const { email, role } = req.body;
       
       // Validate email is provided
       if (!email) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Email address is required' 
-        });
+        return sendBadRequest(res, 'Email address is required');
       }
       
       const updated = await channelService.inviteUserByEmail(channelId, inviterId, email, role);
-      res.status(200).json({
-        success: true,
-        message: 'User invited successfully',
-        data: updated
-      });
+      sendSuccess(res, updated, 'User invited successfully');
       return;
     } catch (err) {
       return next(err);
@@ -71,16 +66,9 @@ export const channelController = {
   async deleteChannel(req: Request, res: Response, next: NextFunction) {
     try {
       const user = req.user;
-      if (!user.roles || !user.roles.includes('admin')) {
-        return res.status(403).json({ success: false, message: 'Only admins can delete channels' });
-      }
       const { channelId } = req.params;
-      const deleted = await channelService.deleteChannel(channelId);
-      res.json({ 
-        success: true, 
-        message: 'Channel and all associated questions deleted successfully',
-        deleted 
-      });
+      const deleted = await channelService.deleteChannel(channelId, user);
+      sendSuccess(res, { deleted }, 'Channel and all associated questions deleted successfully');
       return;
     } catch (err) {
       return next(err);
@@ -91,7 +79,7 @@ export const channelController = {
     try {
       const userId = req.user.id;
       const channels = await channelService.listUserChannels(userId);
-      res.json({ channels });
+      sendSuccess(res, channels, 'Channels retrieved successfully');
     } catch (err) {
       next(err);
     }
@@ -105,10 +93,7 @@ export const channelController = {
 
       // Validate at least one field is provided
       if (!name && !description) {
-        return res.status(400).json({
-          success: false,
-          message: 'Please provide at least one field to update (name or description)'
-        });
+        return sendBadRequest(res, 'Please provide at least one field to update (name or description)');
       }
 
       const updates: { name?: string; description?: string } = {};
@@ -116,12 +101,7 @@ export const channelController = {
       if (description !== undefined) updates.description = description;
 
       const updatedChannel = await channelService.updateChannel(channelId, userId, updates);
-      
-      res.json({
-        success: true,
-        message: 'Channel updated successfully',
-        data: updatedChannel
-      });
+      sendSuccess(res, updatedChannel, 'Channel updated successfully');
       return;
     } catch (err) {
       return next(err);
@@ -132,7 +112,7 @@ export const channelController = {
   //   try {
   //     const { days } = req.query;
   //     const count = await channelService.archiveOldChannels(Number(days) || 90);
-  //     res.json({ archived: count });
+  //     sendSuccess(res, { archived: count }, 'Old channels archived successfully');
   //   } catch (err) {
   //     next(err);
   //   }
