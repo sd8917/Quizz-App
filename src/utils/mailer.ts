@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { getWelcomeEmailTemplate } from './emailTemplate';
+import { getWelcomeEmailTemplate, getPasswordResetEmailTemplate } from './emailTemplate';
 
 const transporter = nodemailer.createTransport({
   service: 'gmail', // or your email provider
@@ -38,31 +38,18 @@ export async function sendWelcomeEmail(to: string, username: string) {
 }
 
 export async function sendPasswordResetEmail(to: string, username: string, resetUrl: string) {
+  const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_USER;
+
+  const { html, subject } = getPasswordResetEmailTemplate(resetUrl, username, {
+    companyName: 'Triviaverse',
+    supportEmail,
+  });
+
   const mailOptions = {
     from: `"Triviaverse" <${process.env.EMAIL_USER}>`,
     to,
-    subject: '🔐 Reset Your Password - Triviaverse',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #667eea;">Reset Your Password</h1>
-        <p>Hi ${username},</p>
-        <p>We received a request to reset your password. Click the button below to create a new password:</p>
-        <a href="${resetUrl}" style="display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0;">
-          Reset Password
-        </a>
-        <p style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin: 20px 0;">
-          <strong>⚠️ Security Notice:</strong><br>
-          This link will expire in 1 hour. If you didn't request this reset, please ignore this email.
-        </p>
-        <p style="font-size: 14px; color: #666;">
-          If the button doesn't work, copy and paste this link into your browser:<br>
-          <a href="${resetUrl}" style="color: #667eea; word-break: break-all;">${resetUrl}</a>
-        </p>
-        <p style="color: #999; font-size: 12px; margin-top: 30px;">
-          © ${new Date().getFullYear()} Quiz Master. All rights reserved.
-        </p>
-      </div>
-    `,
+    subject,
+    html,
     text: `Hi ${username}, we received a request to reset your password. Click here to reset: ${resetUrl}. This link expires in 1 hour. If you didn't request this, please ignore this email.`,
   };
   await transporter.sendMail(mailOptions);

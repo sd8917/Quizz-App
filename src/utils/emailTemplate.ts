@@ -543,6 +543,6 @@ export function getPasswordResetEmailTemplate(
 
   return {
     html,
-    subject: 'Reset Your Password - Action Required'
+    subject: '🔐 Reset Your Password - Triviaverse'
   };
 }
