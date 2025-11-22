@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { getWelcomeEmailTemplate, getPasswordResetEmailTemplate } from './emailTemplate';
+import { getWelcomeEmailTemplate, getPasswordResetEmailTemplate, getChannelInviteEmailTemplate } from './emailTemplate';
 
 const transporter = nodemailer.createTransport({
   service: 'gmail', // or your email provider
@@ -9,12 +9,22 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export async function sendChannelInviteEmail(to: string, channelName: string) {
+export async function sendChannelInviteEmail(to: string, channelName: string, inviterName?: string) {
+  const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:8000/api/';
+  const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_USER;
+
+  const { html, subject } = getChannelInviteEmailTemplate(channelName, inviterName, {
+    websiteUrl,
+    companyName: 'Triviaverse',
+    supportEmail,
+  });
+
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: `"Triviaverse" <${process.env.EMAIL_USER}>`,
     to,
-    subject: `You have been added to channel: ${channelName}`,
-    text: `You have been added as a member to the channel "${channelName}". Log in to participate!`,
+    subject,
+    html,
+    text: `You have been invited to join the channel "${channelName}". ${inviterName ? `Invited by ${inviterName}. ` : ''}Log in at ${websiteUrl} to participate!`,
   };
   await transporter.sendMail(mailOptions);
 }
