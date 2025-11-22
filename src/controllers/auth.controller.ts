@@ -97,3 +97,70 @@ export const logoutAll = async (req: Request, res: Response, next: NextFunction)
     return next(error);
   }
 };
+
+export const requestPasswordReset = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return next(new AppValidationError('Email is required'));
+    }
+
+    // Get IP address and user agent for security tracking
+    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+
+    const result = await authService.requestPasswordReset(email, ipAddress, userAgent);
+    sendSuccess(res, null, result.message);
+  } catch (error: any) {
+    return next(error);
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return next(new AppValidationError('Token and new password are required'));
+    }
+
+    // Validate password strength
+    if (newPassword.length < 6) {
+      return next(new AppValidationError('Password must be at least 6 characters long'));
+    }
+
+    const result = await authService.resetPassword(token, newPassword);
+    sendSuccess(res, null, result.message);
+  } catch (error: any) {
+    if (error && error.message === 'Invalid or expired reset token') {
+      return next(new AppAuthError(error.message));
+    }
+
+    if (error && error.message === 'Account is deactivated') {
+      return next(new AppAuthError(error.message));
+    }
+
+    return next(error);
+  }
+};
+
+export const verifyResetToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { token } = req.query;
+
+    if (!token || typeof token !== 'string') {
+      return next(new AppValidationError('Token is required'));
+    }
+
+    const result = await authService.verifyResetToken(token);
+    
+    if (!result.valid) {
+      return next(new AppAuthError('Invalid or expired reset token'));
+    }
+
+    sendSuccess(res, { email: result.email }, 'Token is valid');
+  } catch (error: any) {
+    return next(error);
+  }
+};

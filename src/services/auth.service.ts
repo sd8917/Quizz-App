@@ -3,6 +3,8 @@ import crypto from 'crypto';
 import { IUser, ILoginRequest, IRegisterRequest, IUserResponse } from '../types';
 import User from '../models/user.model';
 import { RefreshToken } from '../models/refreshToken.model';
+import { PasswordReset } from '../models/passwordReset.model';
+import { sendWelcomeEmail, sendPasswordResetEmail } from '../utils/mailer';
 
 export class AuthService {
   // Generate access token (5 minutes)
@@ -58,6 +60,11 @@ export class AuthService {
       email,
       password,
       roles: ['user'],
+    });
+
+    // Send welcome email asynchronously (don't block registration)
+    sendWelcomeEmail(user.email, user.username).catch((err: any) => {
+      console.error('Failed to send welcome email:', err);
     });
 
     const accessToken = AuthService.generateAccessToken((user._id as string).toString());
@@ -136,5 +143,155 @@ export class AuthService {
       { userId, isRevoked: false },
       { isRevoked: true }
     );
+  }
+
+  /**
+   * Request password reset - generates token and sends email
+   * Security measures:
+   * - Rate limiting at controller level
+   * - Secure random token (32 bytes)
+   * - 1-hour expiration
+   * - Single-use tokens
+   * - Tracks IP and user agent
+   * - Always returns success (prevents email enumeration)
+   */
+  async requestPasswordReset(
+    email: string, 
+    ipAddress?: string, 
+    userAgent?: string
+  ): Promise<{ message: string }> {
+    // Find user by email
+    const user = await User.findOne({ email });
+    
+    // IMPORTANT: Always return success to prevent email enumeration attacks
+    // Don't reveal whether the email exists or not
+    if (!user) {
+      return { 
+        message: 'If your email is registered, you will receive a password reset link shortly.' 
+      };
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      return { 
+        message: 'If your email is registered, you will receive a password reset link shortly.' 
+      };
+    }
+
+    // Invalidate any existing unused tokens for this user
+    await PasswordReset.updateMany(
+      { userId: user._id, isUsed: false },
+      { isUsed: true }
+    );
+
+    // Generate secure random token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    
+    // Hash token before storing (add extra security layer)
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    // Create reset record with 1-hour expiration
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    
+    await PasswordReset.create({
+      userId: user._id,
+      token: hashedToken,
+      expiresAt,
+      isUsed: false,
+      ipAddress,
+      userAgent
+    });
+
+    // Build reset URL with original (unhashed) token
+    const resetUrl = `${process.env.WEBSITE_URL || 'http://localhost:8000/api'}/reset-password?token=${resetToken}`;
+
+    // Send email asynchronously (don't block response)
+    sendPasswordResetEmail(user.email, user.username, resetUrl).catch((err: any) => {
+      console.error('Failed to send password reset email:', err);
+    });
+
+    return { 
+      message: 'If your email is registered, you will receive a password reset link shortly.' 
+    };
+  }
+
+  /**
+   * Reset password using token
+   * Security measures:
+   * - Token validation and expiration check
+   * - Single-use tokens
+   * - Password strength validation at controller level
+   * - Invalidates all refresh tokens (logs out all devices)
+   */
+  async resetPassword(
+    token: string, 
+    newPassword: string
+  ): Promise<{ message: string }> {
+    // Hash the token to match what's stored in DB
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Find valid reset token
+    const resetRecord = await PasswordReset.findOne({
+      token: hashedToken,
+      isUsed: false,
+      expiresAt: { $gt: new Date() }
+    });
+
+    if (!resetRecord) {
+      throw new Error('Invalid or expired reset token');
+    }
+
+    // Get user
+    const user = await User.findById(resetRecord.userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      throw new Error('Account is deactivated');
+    }
+
+    // Update password (will be hashed by pre-save hook)
+    user.password = newPassword;
+    await user.save();
+
+    // Mark token as used
+    resetRecord.isUsed = true;
+    await resetRecord.save();
+
+    // Revoke all refresh tokens (log out from all devices for security)
+    await RefreshToken.updateMany(
+      { userId: user._id, isRevoked: false },
+      { isRevoked: true }
+    );
+
+    return { 
+      message: 'Password reset successful. Please login with your new password.' 
+    };
+  }
+
+  /**
+   * Verify reset token validity without using it
+   * Useful for frontend to check if token is valid before showing form
+   */
+  async verifyResetToken(token: string): Promise<{ valid: boolean; email?: string }> {
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const resetRecord = await PasswordReset.findOne({
+      token: hashedToken,
+      isUsed: false,
+      expiresAt: { $gt: new Date() }
+    }).populate('userId', 'email');
+
+    if (!resetRecord) {
+      return { valid: false };
+    }
+
+    const user = resetRecord.userId as any;
+    return { 
+      valid: true, 
+      email: user.email 
+    };
   }
 }
