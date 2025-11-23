@@ -77,8 +77,8 @@ export const channelController = {
 
   async listUserChannels(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = req.user.id;
-      const channels = await channelService.listUserChannels(userId);
+      const user= req.user;
+      const channels = await channelService.listUserChannels(user);
       sendSuccess(res, channels, 'Channels retrieved successfully');
     } catch (err) {
       next(err);

@@ -4,6 +4,7 @@ import  User  from '../models/user.model';
 // import { publishArchiveJob } from '../workers/queues';
 import mongoose from 'mongoose';
 import { ApiError } from '../utils/apiError';
+import { IUserDocument } from 'src/types';
 
 export const channelService = {
   /**
@@ -150,8 +151,8 @@ export const channelService = {
   /**
    * List all channels where the user is owner or member
    */
-  async listUserChannels(userId: string) {
+  async listUserChannels(user: IUserDocument) {
     // Find channels where user is owner or member
-    return await channelRepo.getChannelsByUser(userId);
+    return await channelRepo.getChannelsByUser(user);
   },
 };

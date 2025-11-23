@@ -2,6 +2,7 @@ import { Channel, IChannel } from '../models/channel.model';
 import mongoose from 'mongoose';
 import User from '../models/user.model';
 import { sendChannelInviteEmail } from '../utils/mailer';
+import { IUserDocument } from 'src/types';
 
 export const channelRepo = {
   /**
@@ -34,7 +35,18 @@ export const channelRepo = {
   /**
    * Get all channels where user is an admin (owner or admin role)
    */
-  async getChannelsByUser(userId: string): Promise<IChannel[]> {
+  async getChannelsByUser(user: IUserDocument): Promise<IChannel[]> {
+    const userId = user._id;
+
+    // check if user is admin then return complete list
+    const isAdmin = user.roles.includes('admin');
+    if(isAdmin){
+      return Channel.find({ isArchived: false })
+        .sort({ createdAt: -1 })
+        .populate('owner', 'username email')
+        .populate('members.user', 'username email')
+        .exec();
+    }
     return Channel.find({
       $or: [
         { owner: userId },

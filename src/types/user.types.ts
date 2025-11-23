@@ -26,6 +26,18 @@ export interface IUserResponse {
   activeStatus?: string;
 }
 
+export interface IUserDocument {
+  _id: any;
+  username: string;
+  email: string;
+  roles: string[];
+  isActive: boolean;
+  createdAt: Date;
+  lastActiveAt?: Date;
+  lastLoginAt?: Date;
+  __v?: number;
+}
+
 export interface ILoginRequest {
   email: string;
   password: string;
