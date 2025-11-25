@@ -7,11 +7,14 @@ export interface IUser extends Document {
   roles: string[];
   createdAt: Date;
   isActive: boolean;
+  isPremium: boolean;
+  premiumExpiresAt?: Date;
   lastLoginAt?: Date;
   lastActiveAt?: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
   getActiveStatus(): string;
   isOnline(): boolean;
+  checkPremiumStatus(): boolean;
 }
 
 export interface IUserResponse {
@@ -19,6 +22,8 @@ export interface IUserResponse {
   username: string;
   email: string;
   role: string;
+  isPremium?: boolean;
+  premiumExpiresAt?: Date;
   accessToken?: string;
   refreshToken?: string;
   lastLoginAt?: Date;
@@ -32,6 +37,8 @@ export interface IUserDocument {
   email: string;
   roles: string[];
   isActive: boolean;
+  isPremium: boolean;
+  premiumExpiresAt?: Date;
   createdAt: Date;
   lastActiveAt?: Date;
   lastLoginAt?: Date;
