@@ -45,7 +45,7 @@ export class QuizController {
       const userId = req.user!.id;
 
       // Check if user is member of channel
-      const channel = await channelService.getChannel(channelId, userId);
+      const channel = await channelService.getChannel(channelId, userId, false);
 
       const isMember = channel.members.some(m => m.user._id.toString() === userId);
       

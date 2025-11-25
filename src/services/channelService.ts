@@ -27,7 +27,7 @@ export const channelService = {
   /**
    * Get a channel by ID
    */
-  async getChannel(channelId: string, userId: string): Promise<IChannel> {
+  async getChannel(channelId: string, userId: string, isMemberCheck: boolean = false): Promise<IChannel> {
     const channel = await channelRepo.getChannelById(channelId);
     if (!channel) throw new ApiError(404, 'Channel not found');
 
@@ -36,7 +36,7 @@ export const channelService = {
     // Allow access if:
     // 1. User is owner
     // 2. User is a member
-    if (!isOwner) {
+    if (!isOwner && isMemberCheck) {
       throw new ApiError(403, 'Access denied - Must be a member or owner of the channel');
     }
 
