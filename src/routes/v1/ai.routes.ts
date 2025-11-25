@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { aiController } from '../../controllers/ai.controller';
 import { protect } from '../../middleware/auth.middleware';
-import authorizeRoles from '../../middleware/role.middleware';
+import requirePremium from '../../middleware/premium.middleware';
 
 const router = Router();
 
@@ -110,7 +110,7 @@ router.use(protect);
  *       500:
  *         description: Server error - AI generation failed
  */
-router.post('/generate-questions', authorizeRoles('creator', 'admin'), aiController.generateQuestions);
+router.post('/generate-questions', requirePremium, aiController.generateQuestions);
 
 /**
  * @swagger
@@ -160,6 +160,6 @@ router.post('/generate-questions', authorizeRoles('creator', 'admin'), aiControl
  *       401:
  *         description: Unauthorized
  */
-router.post('/validate-topic', authorizeRoles('creator', 'admin'), aiController.validateTopic);
+router.post('/validate-topic', requirePremium, aiController.validateTopic);
 
 export default router;

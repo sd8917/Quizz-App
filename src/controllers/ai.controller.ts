@@ -4,16 +4,11 @@ import { sendSuccess, sendBadRequest } from '../utils/helper';
 
 export class AIController {
   /**
-   * Generate questions using AI for premium creators
+   * Generate questions using AI for premium users
    */
   async generateQuestions(req: Request, res: Response, next: NextFunction) {
     try {
       const user = req.user!;
-      
-      // Check if user has premium/creator role
-      if (!user.roles || !user.roles.includes('creator')) {
-        return sendBadRequest(res, 'Only premium creators can use AI question generation');
-      }
 
       const { topic, difficulty, numberOfQuestions, marks } = req.body;
 

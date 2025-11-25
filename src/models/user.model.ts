@@ -27,6 +27,8 @@ const UserSchema = new Schema<IUser>({
     },
     roles: [{ type: String }],
     isActive: { type: Boolean, default: true },
+    isPremium: { type: Boolean, default: false },
+    premiumExpiresAt: { type: Date },
     createdAt: { type: Date, default: Date.now },
     lastLoginAt: { type: Date },
     lastActiveAt: { type: Date }
@@ -74,6 +76,25 @@ UserSchema.methods.getActiveStatus = function (): string {
     if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
     
     return this.lastActiveAt.toLocaleDateString();
+};
+
+// Check if user has active premium subscription
+UserSchema.methods.checkPremiumStatus = function (): boolean {
+    if (!this.isPremium) return false;
+    
+    // If no expiry date, premium is permanent
+    if (!this.premiumExpiresAt) return true;
+    
+    // Check if premium has expired
+    const now = new Date();
+    if (this.premiumExpiresAt < now) {
+        // Auto-expire premium
+        this.isPremium = false;
+        this.save().catch((err: any) => console.error('Failed to auto-expire premium:', err));
+        return false;
+    }
+    
+    return true;
 };
 
 
