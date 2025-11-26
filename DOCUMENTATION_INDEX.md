@@ -119,7 +119,7 @@ Welcome to the Quizz-App API documentation. This guide will help you navigate al
 
 ```bash
 # Login as admin
-POST /api/auth/login
+POST /api/login
 Body: { "email": "admin@example.com", "password": "..." }
 
 # View recent errors

@@ -4,7 +4,7 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Quiz App API Documentation',
+      title: 'TriviaVerse API Documentation',
       version: '1.0.0',
       description: `
 ## Quiz Collaboration Platform API
@@ -165,7 +165,7 @@ Authorization: Bearer <your_access_token>
             },
             path: {
               type: 'string',
-              example: '/api/auth/login'
+              example: '/api/login'
             }
           }
         },
@@ -427,7 +427,7 @@ Authorization: Bearer <your_access_token>
                   }
                 },
                 timestamp: '2025-11-18T10:30:45.123Z',
-                path: '/api/auth/register'
+                path: '/api/register'
               }
             }
           }
@@ -455,7 +455,10 @@ Authorization: Bearer <your_access_token>
     },
     security: []
   },
-  apis: ['./src/routes/**/*.ts', './src/controllers/**/*.ts', './src/app.ts']
+  // Use different paths for development (TypeScript) and production (JavaScript)
+  apis: process.env.NODE_ENV === 'production' 
+    ? ['./dist/routes/**/*.js', './dist/controllers/**/*.js', './dist/app.js']
+    : ['./src/routes/**/*.ts', './src/controllers/**/*.ts', './src/app.ts']
 };
 
 const swaggerSpec = swaggerJsdoc(options);

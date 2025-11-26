@@ -57,7 +57,7 @@ app.use(
   '/api-docs',
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec, {
-    customSiteTitle: 'Quiz App API Documentation',
+    customSiteTitle: 'TriviaVerse API Documentation',
     customCss: '.swagger-ui .topbar { display: none }',
     swaggerOptions: {
       persistAuthorization: true,
@@ -77,7 +77,7 @@ app.get('/api-docs.json', (_req, res) => {
 // --- Healthcheck ---
 app.get('/', (_req, res) => {
   logger.info('Root endpoint accessed');
-  res.json({ message: '🧠 Welcome to the Blogging/Quiz API Service' });
+  res.json({ message: '🧠 Welcome to the TriviaVerse API Service' });
 });
 
 /**

@@ -199,7 +199,7 @@ All responses follow the standardized format:
 
 ```bash
 # Get admin token first
-curl -X POST http://localhost:3000/api/auth/login \
+curl -X POST http://localhost:3000/api/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"password123"}'
 
@@ -264,7 +264,7 @@ npm run dev
 
 ### 2. Login as Admin
 ```bash
-POST /api/auth/login
+POST /api/login
 {
   "email": "admin@example.com",
   "password": "your_password"

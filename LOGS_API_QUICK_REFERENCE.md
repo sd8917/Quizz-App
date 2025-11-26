@@ -148,7 +148,7 @@ DELETE /api/logs/error
 
 1. **Login as Admin**
    ```bash
-   POST /api/auth/login
+   POST /api/login
    { "email": "admin@example.com", "password": "..." }
    ```
 
