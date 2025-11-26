@@ -1,7 +1,7 @@
 # Quiz Submission Tracking System
 
 ## Overview
-Users can only submit a quiz **once per channel**. Creators and admins can view all submissions for their channels.
+Users can only submit a quiz **once per channel**. Creators can view all submissions for their channels. Admin has access to all the channel.
 
 ---
 
@@ -41,15 +41,13 @@ Content-Type: application/json
 #### Request Body
 ```json
 {
-  "answers": [
-    {
-      "questionId": "673fbc123456789012345678",
-      "selectedOption": "Option text"
-    },
-    {
-      "questionId": "673fbc123456789012345679",
-      "selectedOption": "Another option"
-    }
+   "answers": [
+    { "questionId": "69141a82572885ff468e24ec", "selectedOption": "Venus" },
+    { "questionId": "69141a82572885ff468e24f1", "selectedOption": "Mercury" },
+    { "questionId": "69141a82572885ff468e24f6", "selectedOption": "Pluto" },
+    { "questionId": "69141a82572885ff468e24fb", "selectedOption": "Earth" },
+    { "questionId": "69141a82572885ff468e2500", "selectedOption": "Saturn" },
+    { "questionId": "69141a82572885ff468e2505", "selectedOption": "Jupitersd" }
   ]
 }
 ```

@@ -1,38 +1,46 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { AttemptService } from "../services/attempt.service";
+import { sendSuccess, sendCreated, sendBadRequest } from '../utils/helper';
 
 export class AttemptController {
   private attemptService = new AttemptService();
 
-  submitQuizAttempt = async (req: Request, res: Response) => {
+  submitQuizAttempt = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.id;
       const { channelId } = req.params;
       const { answers } = req.body;
       const result = await this.attemptService.submitQuizAttempt(userId, channelId, answers);
-      res.status(201).json({ success: true, data: result });
+      sendCreated(res, result, 'Quiz attempt submitted successfully');
     } catch (err: any) {
-      res.status(400).json({ success: false, message: err.message });
+      if (err.message === 'You have already submitted this quiz.') {
+        return sendBadRequest(res, err.message);
+      }
+      next(err);
     }
   };
 
-  getUserAttempts = async (req: Request, res: Response) => {
+  getUserAttempts = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.id;
-      const data = await this.attemptService.getUserAttempts(userId);
-      res.json({ success: true, data });
-    } catch (err: any) {
-      res.status(400).json({ success: false, message: err.message });
+      const attempts = await this.attemptService.getUserAttempts(userId);
+      sendSuccess(res, attempts, 'User attempts retrieved successfully');
+    } catch (err) {
+      next(err);
     }
   };
 
-  getLeaderboard = async (req: Request, res: Response) => {
+  getLeaderboard = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { channelId } = req.params;
-      const data = await this.attemptService.getLeaderboard(channelId);
-      res.json({ success: true, data });
-    } catch (err: any) {
-      res.status(400).json({ success: false, message: err.message });
+      const leaderboard = await this.attemptService.getLeaderboard(channelId);
+      sendSuccess(res, {
+        channelId,
+        totalParticipants: leaderboard.length,
+        leaderboard
+      }, 'Leaderboard retrieved successfully');
+    } catch (err) {
+      next(err);
     }
   };
 }
