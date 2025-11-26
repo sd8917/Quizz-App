@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/user.model';
+import { sendUnauthorized } from '../utils/helper';
 
 interface IDecodedToken {
   id: string;
@@ -29,7 +30,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
     }
 
     if (!token) {
-      res.status(401).json({ message: 'Not authorized, no token' });
+      sendUnauthorized(res, 'Not authorized, no token');
       return;
     }
 
@@ -38,7 +39,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
 
 
     if (!user) {
-      res.status(401).json({ message: 'Not authorized, user not found' });
+      sendUnauthorized(res, 'Not authorized, user not found');
       return;
     }
 
@@ -60,7 +61,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
     next();
     return;
   } catch (error) {
-    res.status(401).json({ message: 'Not authorized, token failed' });
+    sendUnauthorized(res, 'Not authorized, token failed');
     return;
   }
 };
