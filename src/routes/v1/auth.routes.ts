@@ -60,7 +60,7 @@ const router = express.Router();
  *       422:
  *         $ref: '#/components/responses/ValidationError'
  *       429:
- *         description: Too many requests (rate limit: 5 per 15 minutes)
+ *         description: 'Too many requests (rate limit: 5 per 15 minutes)'
  */
 // Apply strict rate limiting to auth endpoints
 router.post('/register', authLimiter, register);
@@ -107,7 +107,7 @@ router.post('/register', authLimiter, register);
  *       401:
  *         description: Invalid credentials
  *       429:
- *         description: Too many requests (rate limit: 5 per 15 minutes)
+ *         description: 'Too many requests (rate limit: 5 per 15 minutes)'
  */
 router.post('/login', authLimiter, login);
 
@@ -150,7 +150,7 @@ router.post('/login', authLimiter, login);
  *       401:
  *         description: Invalid or expired refresh token
  *       429:
- *         description: Too many requests (rate limit: 20 per 15 minutes)
+ *         description: 'Too many requests (rate limit: 20 per 15 minutes)'
  */
 // Apply moderate rate limiting to token refresh
 router.post('/refresh', refreshLimiter, refreshToken);
@@ -249,7 +249,7 @@ router.post('/logout-all', protect, logoutAll);
  *       400:
  *         description: Email is required
  *       429:
- *         description: Too many requests (rate limit: 5 per 15 minutes)
+ *         description: 'Too many requests (rate limit: 5 per 15 minutes)'
  */
 router.post('/forgot-password', authLimiter, requestPasswordReset);
 
