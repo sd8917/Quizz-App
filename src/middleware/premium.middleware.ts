@@ -5,7 +5,7 @@ import { ApiError } from '../utils/apiError';
  * Middleware to check if user has premium access
  * Must be used after protect middleware
  */
-export const requirePremium = (req: Request, res: Response, next: NextFunction) => {
+export const requirePremium = (req: Request, _res: Response, next: NextFunction) => {
   try {
     const user = req.user;
 
@@ -30,7 +30,7 @@ export const requirePremium = (req: Request, res: Response, next: NextFunction) 
  * Middleware to check premium status and attach to request
  * This doesn't block non-premium users, just adds premium info
  */
-export const checkPremium = (req: Request, res: Response, next: NextFunction) => {
+export const checkPremium = (req: Request, _res: Response, next: NextFunction) => {
   try {
     const user = req.user;
 
