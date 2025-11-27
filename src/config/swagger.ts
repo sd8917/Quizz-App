@@ -330,39 +330,84 @@ Authorization: Bearer <your_access_token>
           properties: {
             status: {
               type: 'string',
-              example: 'ok'
+              example: 'ok',
+              description: 'Overall service status'
             },
             uptime: {
+              type: 'string',
+              example: '2h 15m 30s',
+              description: 'Human-readable uptime'
+            },
+            uptimeSeconds: {
               type: 'number',
-              example: 86400.5
+              example: 8130.5,
+              description: 'Uptime in seconds'
             },
             timestamp: {
-              type: 'number',
-              example: 1700308245123
+              type: 'string',
+              format: 'date-time',
+              example: '2025-11-27T10:30:45.123Z',
+              description: 'Current server time in ISO format'
             },
             env: {
               type: 'string',
-              example: 'development'
+              example: 'development',
+              description: 'Environment (development, production, etc.)'
             },
             memory: {
               type: 'object',
+              description: 'Memory usage information',
               properties: {
-                rss: { type: 'number' },
-                heapTotal: { type: 'number' },
-                heapUsed: { type: 'number' },
-                external: { type: 'number' }
+                rss: { 
+                  type: 'string',
+                  example: '45.23 MB',
+                  description: 'Resident Set Size - total memory allocated'
+                },
+                heapTotal: { 
+                  type: 'string',
+                  example: '20.15 MB',
+                  description: 'Total heap allocated'
+                },
+                heapUsed: { 
+                  type: 'string',
+                  example: '15.42 MB',
+                  description: 'Heap memory currently in use'
+                },
+                external: { 
+                  type: 'string',
+                  example: '2.10 MB',
+                  description: 'Memory used by C++ objects bound to JS'
+                },
+                arrayBuffers: { 
+                  type: 'string',
+                  example: '1.05 MB',
+                  description: 'Memory allocated for ArrayBuffers and SharedArrayBuffers'
+                },
+                raw: {
+                  type: 'object',
+                  description: 'Raw memory values in bytes',
+                  properties: {
+                    rss: { type: 'number', example: 47448064 },
+                    heapTotal: { type: 'number', example: 21135360 },
+                    heapUsed: { type: 'number', example: 16168456 },
+                    external: { type: 'number', example: 2202976 }
+                  }
+                }
               }
             },
             database: {
               type: 'object',
+              description: 'Database connection status',
               properties: {
                 state: {
                   type: 'string',
-                  example: 'connected'
+                  example: 'connected',
+                  enum: ['disconnected', 'connected', 'connecting', 'disconnecting', 'unknown']
                 },
                 readyState: {
                   type: 'number',
-                  example: 1
+                  example: 1,
+                  description: '0=disconnected, 1=connected, 2=connecting, 3=disconnecting'
                 }
               }
             }

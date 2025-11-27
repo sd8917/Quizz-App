@@ -1,4 +1,4 @@
-# Blog API
+# triviaverse.site API
 
 A scalable backend for a quiz collaboration platform — enabling teams to create channels, invite members, add and approve questions, and manage archives.
 Built with Node.js, Express, MongoDB, and Redis.
@@ -14,7 +14,7 @@ Supports millions of users, background workers, and S3 cold storage archiving.
                                           │
                                           ▼
                    ┌──────────────────────────────┐
-                   │    API Gateway / Load Balancer│
+                   │    Nginx / Load Balancer│
                    └──────────────────────────────┘
                                 │
       ┌─────────────────────────┴─────────────────────────┐
@@ -49,7 +49,7 @@ Supports millions of users, background workers, and S3 cold storage archiving.
       │
       ▼
 ┌────────────────────────────────────────────────────────────┐
-│ Monitoring: Prometheus + Grafana + ELK + Sentry            │
+│Monitoring: PM2 Monitor | Serverlogs admin dashboard        │
 └────────────────────────────────────────────────────────────┘
 
 ```
@@ -58,11 +58,12 @@ Supports millions of users, background workers, and S3 cold storage archiving.
 ```
 quiz-backend/
 ├── src/
-│   ├── models/
-│   ├── controllers/
-│   ├── routes/
-│   ├── middleware/
-│   ├── services/
+│   ├── models/      --> Databse schema
+│   ├── controllers/ --> 
+│   ├── routes/      --->
+│   ├── middleware/  --> Pre request checks
+|   ├── repository/  --> DB operation handling
+│   ├── services/   --> Logics
 │   │    ├── auth/
 │   │    ├── channel/
 │   │    └── worker/
@@ -77,9 +78,6 @@ quiz-backend/
 │   ├── s3.ts
 │   └── bullmq.ts
 │
-├── tests/
-├── docker-compose.yml
-├── Dockerfile
 └── README.md
 
 
@@ -95,7 +93,9 @@ EMAIL_PASS=XXX
 EMAIL_USER=XXX
 REFRESH_TOKEN_EXPIRY=XXX
 ACCESS_TOKEN_EXPIRY=XXX
-
+SUPPORT_EMAIL=XXXX
+WEBSITE_URL=xxxx
+GEMINI_API_KEY=xxxxx
 
 ```
 
@@ -123,12 +123,12 @@ The API implements IP-based rate limiting using `express-rate-limit` to protect 
 1. **Authentication Endpoints** (Login/Register)
    - 5 requests per 15 minutes per IP
    - Prevents brute force attacks
-   - Routes: `/api/v1/auth/login`, `/api/v1/auth/register`
+   - Routes: `/api/login`, `/api/register`
 
 2. **Token Refresh Endpoint**
    - 20 requests per 15 minutes per IP
    - More lenient since tokens expire frequently
-   - Route: `/api/v1/auth/refresh`
+   - Route: `/api/refresh`
 
 3. **General API Endpoints**
    - 100 requests per 15 minutes per IP
@@ -159,9 +159,9 @@ When rate limited, responses include:
 The system uses a dual-token approach for enhanced security:
 
 **Access Token (JWT)**
-- Short-lived: 5 minutes expiry
+- Short-lived: 3 day expiry
 - Used for API authentication (Bearer token in Authorization header)
-- Contains user ID and role information
+- Contains user ID ,role information and active/inactive status
 - Stateless verification using JWT secret
 
 **Refresh Token**
@@ -186,6 +186,8 @@ The system implements a three-tier role hierarchy:
 - Can take/submit quizzes
 - Can view their own attempts and scores
 - Can view channels they are invited to
+- Can view leaderboard channel wise(Invited)
+- Can view the submitted quiz dashboard
 
 **creator**
 - All user permissions, plus:
@@ -193,6 +195,8 @@ The system implements a three-tier role hierarchy:
 - Can create quiz questions (single or bulk)
 - Can invite users to channels
 - Intended for quiz creators and content managers
+- Can view leaderboard channel wise(Invited)
+- Anlaytical dashboard for user/channel/quizzed.
 
 **admin**
 - All creator permissions, plus:
@@ -201,7 +205,7 @@ The system implements a three-tier role hierarchy:
 - Can manage user roles (assign/remove user, creator, or admin roles)
 - Full system access for administrative tasks
 
-Role assignment: New users are assigned the 'user' role by default. Admins can promote users to 'creator' or 'admin' via the profile management API.
+` Role assignment `: New users are assigned the 'user' role by default. Admins can promote users to 'creator' or 'admin' via the channel management API.
 
 ## 🧩 Data Models (MongoDB + Mongoose)
 
@@ -213,27 +217,35 @@ Role assignment: New users are assigned the 'user' role by default. Admins can p
   email: { type: String, unique: true },
   password: String (hashed),
   roles: ["user", "creator", "admin"],
-  createdAt: Date
+  createdAt: Date,
+  isActive: Boolean,
+  isPremium: Boolean,
+  premiumExpiresAt: Boolean,
+  lastLoginAt: Date,
+  lastActiveAt: Date
 }
 ```
 
 # Channel
 ```
 {
-  _id: ObjectId,
-  name: String,
-  slug: String,
-  owner: ObjectId, // User
-  team: [
-    { userId: ObjectId, role: "admin"|"member", invitedAt: Date, acceptedAt: Date }
+  "_id":         ObjectId,
+  "name":        String,
+  "description": String,
+  "owner":       ObjectId,
+  "members": [
+    {
+      "user": ObjectId,
+      "role": ["user", "creator", "admin"],
+    }
   ],
-  createdAt: Date,
-  status: "active"|"archived"|"deleted"
+  "createdAt": "2025-11-27T10:00Z",
+  "status": "active"
 }
 
 ```
 
-#Question
+# Question
 ```
 {
   _id: ObjectId,
@@ -285,40 +297,42 @@ Tests:
 
 ## API Reference (v1)
 
-All routes are mounted under `/api/v1/{routeName}`. Authentication is JWT-based — protected routes require a valid token in the `Authorization: Bearer <token>` header.
+For version create folder by version name.
 
-Note: route files are registered automatically from `src/routes/v1` and mounted using their filename (for example `auth.routes.ts` => `/api/v1/auth`).
+All routes are mounted under `/api/{routeName}`. Authentication is JWT-based — protected routes require a valid token in the `Authorization: Bearer <token>` header.
+
+Note: route files are registered automatically from `src/routes/v1` and mounted using their filename (for example `auth.routes.ts` => `/api/`).
 
 Endpoints (summary)
 
 - Auth
-  - POST /api/v1/auth/register — Register a new user (public)
-  - POST /api/v1/auth/login — Login and receive JWT tokens (public)
-  - POST /api/v1/auth/refresh — Refresh access token using refresh token (public)
-  - POST /api/v1/auth/logout — Logout and revoke refresh token (public)
-  - POST /api/v1/auth/logout-all — Logout from all devices (protected)- Channels (all protected)
-  - POST /api/v1/channel/ — Create a channel (creator/admin only)
-  - GET /api/v1/channel/ — List channels for current user
-  - GET /api/v1/channel/:channelId — Get channel details
-  - POST /api/v1/channel/:channelId/invite — Invite a user to a channel (creator/admin only)
-  - DELETE /api/v1/channel/:channelId — Delete a channel (admin only)
+  - POST /api/register — Register a new user (public)
+  - POST /api/login — Login and receive JWT tokens (public)
+  - POST /api/refresh — Refresh access token using refresh token (public)
+  - POST /api/logout — Logout and revoke refresh token (public)
+  - POST /api/logout-all — Logout from all devices (protected)- Channels (all protected)
+  - POST /api/channel/ — Create a channel (creator/admin only)
+  - GET /api/channel/ — List channels for current user
+  - GET /api/channel/:channelId — Get channel details
+  - POST /api/channel/:channelId/invite — Invite a user to a channel (creator/admin only)
+  - DELETE /api/channel/:channelId — Delete a channel (admin only)
 
 - Quiz (protected)
-  - POST /api/v1/quiz/channel/:channelId — Create a question in a channel (creator/admin only)
-  - POST /api/v1/quiz/channel/:channelId/bulk — Bulk create questions (creator/admin only)
-  - GET /api/v1/quiz/channel/:channelId/questions — Get questions for a channel (all authenticated users)
-  - POST /api/v1/quiz/channel/:channelId/submit — Submit a quiz (all authenticated users)
+  - POST /api/quiz/channel/:channelId — Create a question in a channel (creator/admin only)
+  - POST /api/quiz/channel/:channelId/bulk — Bulk create questions (creator/admin only)
+  - GET /api/quiz/channel/:channelId/questions — Get questions for a channel (all authenticated users)
+  - POST /api/quiz/channel/:channelId/submit — Submit a quiz (all authenticated users)
 
 - Attempts (protected)
-  - POST /api/v1/attempt/channel/:channelId/submit — Submit quiz attempt (service prevents duplicate attempts by default)
-  - GET /api/v1/attempt/user — Get attempts for current user
-  - GET /api/v1/attempt/channel/:channelId/leaderboard — Get leaderboard for a channel (top 20 by percentage)
+  - POST /api//attempt/channel/:channelId/submit — Submit quiz attempt (service prevents duplicate attempts by default)
+  - GET /api/attempt/user — Get attempts for current user
+  - GET /api/attempt/channel/:channelId/leaderboard — Get leaderboard for a channel (top 20 by percentage)
 
 - Profile (protected)
-  - GET /api/v1/profile/ — Get current user profile
-  - PUT /api/v1/profile/ — Update current user profile (username, email, password)
-  - GET /api/v1/profile/users — List all users (admin only)
-  - PUT /api/v1/profile/user/:userId/roles — Update user roles (admin only)Notes about attempts & leaderboard
+  - GET /api/profile/ — Get current user profile
+  - PUT /api/profile/ — Update current user profile (username, email, password)
+  - GET /api/profile/users — List all users (admin only)
+  - PUT /api/profile/user/:userId/roles — Update user roles (admin only)Notes about attempts & leaderboard
 - Current behavior: the service checks for an existing attempt document for the (userId, channelId) pair and rejects a second submission with an error "You have already submitted this quiz.". If you want multiple attempts per user, the check in `AttemptService.submitQuizAttempt` must be adjusted (remove the guard, allow upserts, or store history and aggregate best scores in leaderboard).
 - The leaderboard endpoint currently returns attempt documents sorted by `percentage` descending and limited to 20. If multiple attempts per user are allowed the leaderboard may show the same user multiple times; consider using an aggregation to group by `userId` and pick the best score.
 
@@ -331,401 +345,13 @@ All protected endpoints require the header:
 Authorization: Bearer <accessToken>
 
 **Authentication Flow:**
-1. Login/Register returns both `accessToken` (5 min expiry) and `refreshToken` (30 days expiry)
+1. Login/Register returns both `accessToken` (3 day expiry) and `refreshToken` (30 days expiry)
 2. Use `accessToken` for all API requests in the Authorization header
 3. When `accessToken` expires (401 error), use `refreshToken` to get a new `accessToken`
 4. Store `refreshToken` securely (httpOnly cookie recommended in production)
 5. On logout, send `refreshToken` to revoke it from the database
 
-Auth
-- Register
-
-Request
-```json
-POST /api/v1/auth/register
-{
-  "username": "janedoe",
-  "email": "jane@example.com",
-  "password": "s3cret123"
-}
-```
-
-Response
-```json
-{
-  "_id": "641...",
-  "username": "janedoe",
-  "email": "jane@example.com",
-  "accessToken": "eyJhbGci...",
-  "refreshToken": "a1b2c3d4e5f6..."
-}
-```
-
-- Login
-
-Request
-```json
-POST /api/v1/auth/login
-{
-  "email": "jane@example.com",
-  "password": "s3cret123"
-}
-```
-
-Response
-```json
-{
-  "_id": "641...",
-  "username": "janedoe",
-  "email": "jane@example.com",
-  "accessToken": "eyJhbGci...",
-  "refreshToken": "a1b2c3d4e5f6..."
-}
-```
-
-- Refresh Token
-
-Request
-```json
-POST /api/v1/auth/refresh
-{
-  "refreshToken": "a1b2c3d4e5f6..."
-}
-```
-
-Response
-```json
-{
-  "accessToken": "eyJhbGci..."
-}
-```
-
-- Logout
-
-Request
-```json
-POST /api/v1/auth/logout
-{
-  "refreshToken": "a1b2c3d4e5f6..."
-}
-```
-
-Response
-```json
-{
-  "success": true,
-  "message": "Logged out successfully"
-}
-```
-
-- Logout from All Devices
-
-Request
-```http
-POST /api/v1/auth/logout-all
-Authorization: Bearer <accessToken>
-```
-
-Response
-```json
-{
-  "success": true,
-  "message": "Logged out from all devices"
-}
-}
-```
-
-Channels (protected)
-- Create channel
-
-Request
-```json
-POST /api/v1/channel/
-{
-      "name": "Frontend Team",
-      "slug": "frontend-team"
-}
-```
-
-Response
-```json
-{
-      "success": true,
-      "data": { "_id": "642...", "name": "Frontend Team", "slug": "frontend-team" }
-}
-```
-
-- Invite user
-
-Request
-```json
-POST /api/v1/channel/:channelId/invite
-{
-      "email": "coworker@example.com",
-      "role": "member"
-}
-```
-
-Response
-```json
-{
-      "success": true,
-      "data": { "invited": true, "email": "coworker@example.com" }
-}
-```
-
-Quiz (protected)
-- Create question (admin)
-
-Request
-```json
-POST /api/v1/quiz/channel/:channelId
-{
-      "text": "What is 2+2?",
-      "options": [
-            { "text": "3", "isCorrect": false },
-            { "text": "4", "isCorrect": true }
-      ],
-      "marks": 1
-}
-```
-
-Response
-```json
-{
-      "success": true,
-      "data": { "_id": "651...", "text": "What is 2+2?", "options": [...], "marks": 1 }
-}
-```
-
-- Get questions for user
-
-Request
-```http
-GET /api/v1/quiz/channel/:channelId/questions
-Authorization: Bearer <token>
-```
-
-Response
-```json
-{
-      "success": true,
-      "data": [ { "_id": "651...", "text": "...", "options": [ { "text": "..." } ] } ]
-}
-```
-
-- Submit quiz (user-facing endpoint that collects answers for a quiz session)
-
-Request
-```json
-POST /api/v1/quiz/channel/:channelId/submit
-{
-      "answers": [ { "questionId": "651...", "selectedOption": "4" } ]
-}
-```
-
-Response
-```json
-{
-      "success": true,
-      "data": { "score": 1, "total": 1, "percentage": 100 }
-}
-```
-
-Attempts (protected)
-- Submit attempt
-
-Request
-```json
-POST /api/v1/attempt/channel/:channelId/submit
-{
-      "answers": [ { "questionId": "651...", "selectedOption": "A" } ]
-}
-```
-
-Response (on success)
-```json
-{
-      "success": true,
-      "data": {
-            "_id": "662...",
-            "userId": "610...",
-            "channelId": "630...",
-            "score": 8,
-            "total": 10,
-            "percentage": 80,
-            "answers": [ { "questionId": "651...", "selectedOption": "A", "isCorrect": true } ],
-            "submittedAt": "2025-11-12T..."
-      }
-}
-```
-
-Response (when already submitted)
-```json
-{
-      "success": false,
-      "message": "You have already submitted this quiz."
-}
-```
-
-- Get user attempts
-
-Request
-```http
-GET /api/v1/attempt/user
-Authorization: Bearer <token>
-```
-
-Response
-```json
-{
-      "success": true,
-      "data": [ { "_id": "662...", "channel": { "_id": "630...", "name": "Frontend Team" }, "score": 8, "percentage": 80 } ]
-}
-```
-
-- Channel leaderboard
-
-Request
-```http
-GET /api/v1/attempt/channel/:channelId/leaderboard
-Authorization: Bearer <token>
-```
-
-Response (current behavior)
-```json
-{
-      "success": true,
-      "data": [
-            { "userId": "610...", "name": "Alice", "percentage": 95, "score": 19, "total": 20 },
-            { "userId": "611...", "name": "Bob", "percentage": 90, "score": 18, "total": 20 }
-      ]
-}
-```
-
-If you want these examples expanded (full request headers, more fields, or an OpenAPI spec), tell me which endpoints to prioritize and I will add them.
-
-Profile & Role Management
-- Get my profile
-
-Request
-```http
-GET /api/v1/profile
-Authorization: Bearer <token>
-```
-
-Response
-```json
-{
-      "success": true,
-      "data": { "_id": "610...", "username": "alice", "email": "alice@example.com", "roles": ["user"] }
-}
-```
-
-- Update my profile
-
-Request
-```json
-PUT /api/v1/profile
-Authorization: Bearer <token>
-{
-      "username": "alice2",
-      "password": "new-password"
-}
-```
-
-Response
-```json
-{
-  "success": true,
-  "data": { "_id": "610...", "username": "alice2", "email": "alice@example.com", "roles": ["user"] }
-}
-```
-
-Profile (protected)
-- Get current user profile
-
-Request
-```http
-GET /api/v1/profile/
-Authorization: Bearer <token>
-```
-
-Response
-```json
-{
-  "success": true,
-  "data": { "_id": "610...", "username": "alice", "email": "alice@example.com", "roles": ["user"] }
-}
-```
-
-- Update current user profile
-
-Request
-```json
-PUT /api/v1/profile/
-Authorization: Bearer <token>
-{
-  "username": "alice_updated",
-  "email": "alice.new@example.com"
-}
-```
-
-Response
-```json
-{
-  "success": true,
-  "data": { "_id": "610...", "username": "alice_updated", "email": "alice.new@example.com", "roles": ["user"] }
-}
-```
-
-- Admin: list all users
-
-Request
-```http
-GET /api/v1/profile/users
-Authorization: Bearer <admin-token>
-```
-
-Response
-```json
-{
-  "success": true,
-  "data": [
-    { "_id": "610...", "username": "alice", "email": "alice@example.com", "roles": ["user"] },
-    { "_id": "611...", "username": "bob", "email": "bob@example.com", "roles": ["creator"] }
-  ]
-}
-```
-
-- Admin: update user roles
-
-Request
-```json
-PUT /api/v1/profile/user/:userId/roles
-Authorization: Bearer <admin-token>
-{
-  "role": "creator"
-}
-```
-
-Response
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "message": "User role updated successfully",
-  "data": { 
-    "_id": "611...", 
-    "username": "bob", 
-    "email": "bob@example.com", 
-    "role": "creator" 
-  },
-  "timestamp": "2025-11-16T10:30:45.123Z"
-}
-```
-
-Role Management Notes:
+## Role Management Notes:
 - Only admins can view all users and manage roles
 - Valid roles: `user`, `creator`, `admin`
 - Role hierarchy: user < creator < admin

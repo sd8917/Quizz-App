@@ -113,12 +113,29 @@ app.get('/health', (_req, res) => {
     3: 'disconnecting',
   };
 
+  // Convert bytes to MB
+  const memoryUsage = process.memoryUsage();
+  const toMB = (bytes: number) => (bytes / 1024 / 1024).toFixed(2);
+
   const health = {
     status: 'ok',
-    uptime: process.uptime(),
-    timestamp: Date.now(),
+    uptime: `${Math.floor(process.uptime() / 3600)}h ${Math.floor((process.uptime() % 3600) / 60)}m ${Math.floor(process.uptime() % 60)}s`,
+    uptimeSeconds: process.uptime(),
+    timestamp: new Date().toISOString(),
     env: process.env.NODE_ENV || 'development',
-    memory: process.memoryUsage(),
+    memory: {
+      rss: `${toMB(memoryUsage.rss)} MB`,
+      heapTotal: `${toMB(memoryUsage.heapTotal)} MB`,
+      heapUsed: `${toMB(memoryUsage.heapUsed)} MB`,
+      external: `${toMB(memoryUsage.external)} MB`,
+      arrayBuffers: memoryUsage.arrayBuffers ? `${toMB(memoryUsage.arrayBuffers)} MB` : undefined,
+      raw: {
+        rss: memoryUsage.rss,
+        heapTotal: memoryUsage.heapTotal,
+        heapUsed: memoryUsage.heapUsed,
+        external: memoryUsage.external
+      }
+    },
     database: {
       state: stateMap[dbState] || 'unknown',
       readyState: dbState,
@@ -130,25 +147,27 @@ app.get('/health', (_req, res) => {
 });
 
 // Routes
-//add rout for auth
+
+// add route for auth
 app.use('/api/', authRoutes);
+
+// channel routes
 app.use('/api/channel', channelRoutes);
 
 // quiz routes
 app.use('/api/quiz', quizRoutes);
 
-//leaderboard
+// leaderboard routes
 app.use('/api/attempt', attemptRoutes);
 
-//profile routes
+// profile routes
 app.use('/api/profile', profileRoutes);
 
-//logs routes (admin only)
+// logs routes (admin only)
 app.use('/api/logs', logsRoutes);
 
-//AI routes (premium creators only)
+// AI routes (premium creators only)
 app.use('/api/ai', aiRoutes);
-
 
 // Error handling middleware (centralized)
 app.use(errorHandler);
