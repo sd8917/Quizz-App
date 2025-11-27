@@ -15,6 +15,7 @@ import aiRoutes from './routes/v1/ai.routes';
 import errorHandler from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimit.middleware';
 import logger, { morganStream } from './utils/logger';
+import { isRedisConnected } from './config/redis';
 
 
 const app = express();
@@ -117,6 +118,8 @@ app.get('/health', (_req, res) => {
   const memoryUsage = process.memoryUsage();
   const toMB = (bytes: number) => (bytes / 1024 / 1024).toFixed(2);
 
+  const redisConnected = isRedisConnected();
+
   const health = {
     status: 'ok',
     uptime: `${Math.floor(process.uptime() / 3600)}h ${Math.floor((process.uptime() % 3600) / 60)}m ${Math.floor(process.uptime() % 60)}s`,
@@ -140,6 +143,10 @@ app.get('/health', (_req, res) => {
       state: stateMap[dbState] || 'unknown',
       readyState: dbState,
     },
+    cache: {
+      redis: redisConnected ? 'connected' : 'disconnected',
+      status: redisConnected ? '✅ Active' : '⚠️ Inactive (app running without cache)'
+    }
   };
 
   const code = dbState === 1 ? 200 : 503;

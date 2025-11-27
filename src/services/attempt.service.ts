@@ -2,6 +2,8 @@ import { QuizRepository } from "../repositories/quizRepo";
 import { AttemptRepository } from "../repositories/attempRepo";
 import mongoose, { ObjectId } from "mongoose";
 import { Attempt } from "../models/attempt.model";
+import { LeaderboardCache, LeaderboardEntry } from "./cache.service";
+import logger from "../utils/logger";
 
 export class AttemptService {
   private quizRepo = new QuizRepository();
@@ -48,6 +50,10 @@ export class AttemptService {
       submittedAt: new Date()
     });
 
+    // 4. Invalidate leaderboard cache after new submission
+    await LeaderboardCache.invalidateChannelLeaderboard(channelId);
+    logger.info(`🗑️  Invalidated leaderboard cache for channel: ${channelId}`);
+
     return attempt;
   }
 
@@ -57,13 +63,30 @@ export class AttemptService {
 
   
 async getLeaderboard(channelId: string) {
+  // Try to get from cache first
+  const cachedLeaderboard = await LeaderboardCache.getChannelLeaderboard(channelId, 20, 0);
+  
+  if (cachedLeaderboard) {
+    logger.info(`✅ Serving leaderboard from cache for channel: ${channelId}`);
+    const cachedCount = await LeaderboardCache.getChannelParticipantCount(channelId);
+    return {
+      leaderboard: cachedLeaderboard,
+      totalParticipants: cachedCount || cachedLeaderboard.length,
+      cached: true
+    };
+  }
+
+  // Cache miss - fetch from database
+  logger.info(`💾 Cache miss - fetching leaderboard from DB for channel: ${channelId}`);
+  
   const channelObjectId = new mongoose.Types.ObjectId(channelId);
-  return Attempt.aggregate([
+  const leaderboard = await Attempt.aggregate([
     { $match: { channelId: channelObjectId } },
     { $group: {
         _id: "$userId",
         bestPercentage: { $max: "$percentage" },
-        lastAttemptId: { $first: "$_id" } // or store a doc for reference
+        totalAttempts: { $sum: 1 },
+        lastAttemptId: { $first: "$_id" }
       }
     },
     { $sort: { bestPercentage: -1 } },
@@ -80,9 +103,55 @@ async getLeaderboard(channelId: string) {
         userId: "$_id",
         username: "$user.username",
         email: "$user.email",
-        bestPercentage: 1
+        score: "$bestPercentage",
+        totalAttempts: 1
       }
     }
   ]);
+
+  // Cache the result
+  const entries: LeaderboardEntry[] = leaderboard.map((entry, index) => ({
+    userId: entry.userId.toString(),
+    username: entry.username,
+    email: entry.email,
+    score: entry.score,
+    totalAttempts: entry.totalAttempts,
+    rank: index + 1
+  }));
+
+  await LeaderboardCache.cacheChannelLeaderboard(channelId, entries);
+
+  return {
+    leaderboard: entries,
+    totalParticipants: entries.length,
+    cached: false
+  };
 }
+
+  /**
+   * Get user's rank in a specific channel
+   */
+  async getUserRank(userId: string, channelId: string): Promise<number | null> {
+    // Try cache first
+    const cachedRank = await LeaderboardCache.getUserRank(channelId, userId);
+    if (cachedRank !== null) {
+      return cachedRank;
+    }
+
+    // Fallback to DB query
+    const channelObjectId = new mongoose.Types.ObjectId(channelId);
+    const allScores = await Attempt.aggregate([
+      { $match: { channelId: channelObjectId } },
+      { $group: {
+          _id: "$userId",
+          bestPercentage: { $max: "$percentage" }
+        }
+      },
+      { $sort: { bestPercentage: -1 } }
+    ]);
+
+    const userIndex = allScores.findIndex(s => s._id.toString() === userId);
+    return userIndex !== -1 ? userIndex + 1 : null;
+  }
 }
+

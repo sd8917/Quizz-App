@@ -33,11 +33,14 @@ export class AttemptController {
   getLeaderboard = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { channelId } = req.params;
-      const leaderboard = await this.attemptService.getLeaderboard(channelId);
+      const result = await this.attemptService.getLeaderboard(channelId);
+      
       sendSuccess(res, {
         channelId,
-        totalParticipants: leaderboard.length,
-        leaderboard
+        totalParticipants: result.totalParticipants,
+        leaderboard: result.leaderboard,
+        cached: result.cached,
+        cacheInfo: result.cached ? 'Served from Redis cache' : 'Served from database and cached'
       }, 'Leaderboard retrieved successfully');
     } catch (err) {
       next(err);
