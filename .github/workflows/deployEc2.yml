@@ -62,52 +62,19 @@ jobs:
       #   env:
       #     GITHUB_TOKEN: ${{ secrets.TOKEN_SECRET_GITHUB }}
 
-      - name: Prepare deployment package
-        run: |
-          mkdir -p deploy-package
-          
-          # Copy built files
-          cp -r dist deploy-package/
-          
-          # Copy configuration files
-          cp package*.json deploy-package/
-          cp tsconfig.json deploy-package/
-          cp jest.config.js deploy-package/ 2>/dev/null || true
-          
-          # Copy logs directory structure
-          mkdir -p deploy-package/logs
-          
-          echo "=== Deployment Package Contents ==="
-          ls -la deploy-package/
-          echo "=== Dist Directory ==="
-          ls -la deploy-package/dist/
-
       - name: Deploy to EC2
         uses: easingthemes/ssh-deploy@v2.1.5
         with:
           SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY_BACKEND }}
           REMOTE_USER: ubuntu
           REMOTE_HOST: ${{ secrets.EC2_SERVER_IP_BACKEND }}
-          TARGET: /home/ubuntu/Quizz-App
-          SOURCE: deploy-package/
-          EXCLUDE: /node_modules/, /.git/, /.github/, /src/, *.md, /logs/*.log
+          TARGET: /home/ubuntu/Quizz-App/
+          SOURCE: ./Quizz-App/
           SCRIPT_BEFORE: |
-            pm2 stop Quiz-App || true
-            mkdir -p /home/ubuntu/Quizz-App/logs
+            pm2 stop all || true
+            rm -rf /home/ubuntu/Quizz-App/
+            mkdir -p /home/ubuntu/Quizz-App
           SCRIPT_AFTER: |
-            cd /home/ubuntu/Quizz-App
-            echo "=== Verifying deployment structure ==="
-            ls -la
-            echo "=== Checking dist directory ==="
-            ls -la dist/
-            echo "=== Installing production dependencies ==="
-            npm ci --production --prefer-offline
-            echo "=== Starting application with PM2 ==="
-            pm2 delete Quiz-App || true
-            pm2 start dist/index.js --name="Quiz-App" --node-args="--max-old-space-size=4096"
-            pm2 save
-            echo "=== PM2 Process List ==="
-            pm2 list
-            sleep 2
-            echo "=== Application logs (last 15 lines) ==="
-            pm2 logs Quiz-App --lines 15 --nostream || true
+            cd /home/ubuntu/Quizz-App/dist
+            npm install --production
+            pm2 start all || pm2 start index.js --name "Quizz-App"
