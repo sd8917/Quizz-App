@@ -84,6 +84,10 @@ jobs:
             mkdir -p /home/ubuntu/Quizz-App/logs
           SCRIPT_AFTER: |
             cd /home/ubuntu/Quizz-App
+            echo "Files in directory:"
+            ls -la
             npm install --production --omit=dev
-            pm2 restart Quizz-App || pm2 start index.js --name "Quizz-App" -i max --node-args="--max-old-space-size=4096"
+            pm2 delete Quizz-App || true
+            pm2 start index.js --name "Quizz-App" --node-args="--max-old-space-size=4096"
             pm2 save
+            pm2 list
