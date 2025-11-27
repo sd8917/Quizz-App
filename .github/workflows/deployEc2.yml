@@ -62,19 +62,28 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN_SECRET_GITHUB }}
 
+      - name: Prepare deployment package
+        run: |
+          mkdir -p deploy-package
+          cp -r dist/* deploy-package/
+          cp package*.json deploy-package/
+          echo "Deployment package created"
+          ls -la deploy-package/
+
       - name: Deploy to EC2
         uses: easingthemes/ssh-deploy@v2.1.5
         with:
           SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY_BACKEND }}
           REMOTE_USER: ubuntu
           REMOTE_HOST: ${{ secrets.EC2_SERVER_IP_BACKEND }}
-          TARGET: /home/ubuntu/Quizz-App/dist
-          SOURCE: ./dist/
+          TARGET: /home/ubuntu/Quizz-App
+          SOURCE: deploy-package/
+          EXCLUDE: /node_modules/, /.git/, /.github/
           SCRIPT_BEFORE: |
-            pm2 stop all || true
+            pm2 stop Quizz-App || true
             mkdir -p /home/ubuntu/Quizz-App/logs
-            rm -rf /home/ubuntu/Quizz-App/dist
           SCRIPT_AFTER: |
-            cd /home/ubuntu/Quizz-App/dist
-            npm install --production
-            pm2 start all || pm2 start index.js --name "Quizz-App"
+            cd /home/ubuntu/Quizz-App
+            npm install --production --omit=dev
+            pm2 restart Quizz-App || pm2 start index.js --name "Quizz-App" -i max --node-args="--max-old-space-size=4096"
+            pm2 save
