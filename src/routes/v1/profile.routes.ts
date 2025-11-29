@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { profileController } from '../../controllers/profile.controller';
+import adminController from '../../controllers/admin.controller';
 import { protect } from '../../middleware/auth.middleware';
 import authorizeRoles from '../../middleware/role.middleware';
 import { strictLimiter } from '../../middleware/rateLimit.middleware';
@@ -123,6 +124,44 @@ router.get('/users', authorizeRoles('admin'), profileController.listUsers);
 
 /**
  * @openapi
+ * /api/profile/admin/stats:
+ *   get:
+ *     tags:
+ *       - Admin
+ *     summary: Get system statistics (Admin only)
+ *     description: Retrieve total users, total quizzes, active users today, attempts and completion rate. Admin access only.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         totalUsers:
+ *                           type: integer
+ *                         totalQuizzes:
+ *                           type: integer
+ *                         activeToday:
+ *                           type: integer
+ *                         totalAttempts:
+ *                           type: integer
+ *                         submittedAttempts:
+ *                           type: integer
+ *                         completionRate:
+ *                           type: number
+ */
+router.get('/admin/stats', authorizeRoles('admin'), adminController.getSystemStats);
+
+/**
+ * @openapi
  * /api/profile/user/{userId}/roles:
  *   put:
  *     tags:
@@ -186,7 +225,7 @@ router.get('/users', authorizeRoles('admin'), profileController.listUsers);
  *       404:
  *         description: User not found
  *       429:
- *         description: Too many requests (rate limit: 10 per hour)
+ *         description: 'Too many requests (rate limit: 10 per hour)'
  */
 router.put('/user/:userId/roles', strictLimiter, authorizeRoles('admin'), profileController.updateUserRoles);
 
