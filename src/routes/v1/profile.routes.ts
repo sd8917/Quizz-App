@@ -292,7 +292,7 @@ router.put('/user/:userId/roles', strictLimiter, authorizeRoles('admin'), profil
  *       404:
  *         description: User not found
  *       429:
- *         description: Too many requests - rate limit 10 per hour
+ *         description: 'Too many requests - rate limit 10 per hour'
  */
 router.put('/user/:userId/status', strictLimiter, authorizeRoles('admin'), profileController.toggleUserStatus);
 
