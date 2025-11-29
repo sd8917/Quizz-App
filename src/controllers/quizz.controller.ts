@@ -47,8 +47,8 @@ export class QuizController {
       // Check if user is member of channel
       const channel = await channelService.getChannel(channelId, userId, false);
 
-      const isMember = channel.members.some(m => m.user._id.toString() === userId);
-      
+      const isMember = channel.members.some(m => ((m.user._id.toString() === userId) || req.user?.roles?.includes("admin") ));
+  
       if (!isMember) {
         return sendForbidden(res, 'You must be a member of this channel to view questions');
       }
