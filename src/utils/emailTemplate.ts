@@ -546,3 +546,166 @@ export function getPasswordResetEmailTemplate(
     subject: '🔐 Reset Your Password - Triviaverse'
   };
 }
+
+/**
+ * Contact Support Email Template
+ * Email sent to support team when users submit contact/support requests
+ */
+export function getContactSupportEmailTemplate(
+  userEmail: string,
+  username: string,
+  message: string,
+  options: EmailTemplateOptions = {}
+): { html: string; subject: string } {
+  const { companyName } = { ...defaultOptions, ...options };
+
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Support Request</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 40px 30px;
+      text-align: center;
+      color: white;
+    }
+    .header h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+    .header p {
+      font-size: 16px;
+      opacity: 0.9;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .info-box {
+      background: linear-gradient(135deg, #f0f4ff 0%, #e9d5ff 100%);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 25px;
+      border: 2px solid #e0e7ff;
+    }
+    .info-row {
+      display: flex;
+      margin-bottom: 12px;
+    }
+    .info-row:last-child {
+      margin-bottom: 0;
+    }
+    .info-label {
+      font-weight: 600;
+      color: #4c1d95;
+      min-width: 100px;
+    }
+    .info-value {
+      color: #374151;
+    }
+    .message-box {
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 20px;
+      border-left: 4px solid #667eea;
+    }
+    .message-label {
+      font-weight: 600;
+      color: #4c1d95;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+    .message-content {
+      color: #374151;
+      font-size: 15px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .footer {
+      background: #f9fafb;
+      padding: 25px 30px;
+      text-align: center;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .footer p {
+      margin: 6px 0;
+    }
+    .timestamp {
+      color: #9ca3af;
+      font-size: 12px;
+      text-align: center;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <h1>📬 New Support Request</h1>
+      <p>A user has submitted a support request</p>
+    </div>
+    <div class="content">
+      <div class="info-box">
+        <div class="info-row">
+          <span class="info-label">From:</span>
+          <span class="info-value">${username}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Email:</span>
+          <span class="info-value"><a href="mailto:${userEmail}" style="color: #667eea; text-decoration: none;">${userEmail}</a></span>
+        </div>
+      </div>
+      <div class="message-box">
+        <div class="message-label">Message</div>
+        <div class="message-content">${message}</div>
+      </div>
+      <div class="timestamp">
+        Received on ${new Date().toLocaleString('en-US', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZoneName: 'short'
+        })}
+      </div>
+    </div>
+    <div class="footer">
+      <p><strong>${companyName} Support System</strong></p>
+      <p>© ${new Date().getFullYear()} ${companyName}. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  return {
+    html,
+    subject: `📬 Support Request from ${username}`
+  };
+}

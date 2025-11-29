@@ -56,3 +56,16 @@ export const strictLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+// Rate limit for contact/support requests
+// Prevents spam while allowing legitimate support requests
+export const contactLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // Limit each IP to 5 contact requests per hour
+  message: {
+    success: false,
+    message: 'Too many support requests, please try again after 1 hour'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});

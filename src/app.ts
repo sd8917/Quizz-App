@@ -12,6 +12,7 @@ import { attemptRoutes } from './routes/v1/attempt.routes';
 import { profileRoutes } from './routes/v1/profile.routes';
 import { logsRoutes } from './routes/v1/logs.routes';
 import aiRoutes from './routes/v1/ai.routes';
+import contactRoutes from './routes/v1/contact.routes';
 import errorHandler from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimit.middleware';
 import logger, { morganStream } from './utils/logger';
@@ -168,6 +169,9 @@ app.use('/api/logs', logsRoutes);
 
 // AI routes (premium creators only)
 app.use('/api/ai', aiRoutes);
+
+// Contact/Support routes
+app.use('/api/contact', contactRoutes);
 
 // Error handling middleware (centralized)
 app.use(errorHandler);
