@@ -1,8 +1,10 @@
 
 import { Router } from 'express';
 import feedbackController from '../../controllers/feedback.controller';
+import { protect } from '../../middleware/auth.middleware';
 import authorizeRoles from '../../middleware/role.middleware';
 import { strictLimiter } from '../../middleware/rateLimit.middleware';
+import { ROLES } from '../../utils/helper';
 
 const router = Router();
 
@@ -66,7 +68,7 @@ router.post('/', feedbackController.submitFeedback);
  *       200:
  *         description: Feedback list
  */
-router.get('/', strictLimiter, authorizeRoles('admin'), feedbackController.listFeedbacks);
+router.get('/', protect, strictLimiter, authorizeRoles(ROLES.ADMIN), feedbackController.listFeedbacks);
 
 export { router as feedbackRoutes };
 
