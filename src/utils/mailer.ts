@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { getWelcomeEmailTemplate, getPasswordResetEmailTemplate, getChannelInviteEmailTemplate } from './emailTemplate';
+import { getSupportEmailTemplate } from './emailTemplate';
 
 const transporter = nodemailer.createTransport({
   service: 'gmail', // or your email provider
@@ -62,6 +63,26 @@ export async function sendPasswordResetEmail(to: string, username: string, reset
     html,
     text: `Hi ${username}, we received a request to reset your password. Click here to reset: ${resetUrl}. This link expires in 1 hour. If you didn't request this, please ignore this email.`,
   };
+  await transporter.sendMail(mailOptions);
+}
+
+export async function sendSupportEmail(fromName: string, fromEmail: string, subjectLine: string, messageBody: string) {
+  const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_USER;
+
+  const { html } = getSupportEmailTemplate(fromName, fromEmail, subjectLine, messageBody, {
+    websiteUrl: process.env.WEBSITE_URL,
+    companyName: 'Triviaverse',
+    supportEmail,
+  });
+
+  const mailOptions = {
+    from: `"Triviaverse Support" <${process.env.EMAIL_USER}>`,
+    to: supportEmail,
+    subject: `[Support] Action: Alert for sending message- ${subjectLine}`,
+    html,
+    text: `From: ${fromName} <${fromEmail}>\nSubject: ${subjectLine}\n\n${messageBody}`,
+  };
+
   await transporter.sendMail(mailOptions);
 }
 

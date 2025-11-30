@@ -15,6 +15,7 @@ import aiRoutes from './routes/v1/ai.routes';
 import errorHandler from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimit.middleware';
 import logger, { morganStream } from './utils/logger';
+import { supportRoutes } from './routes/v1/support.routes';
 
 
 const app = express();
@@ -168,6 +169,9 @@ app.use('/api/logs', logsRoutes);
 
 // AI routes (premium creators only)
 app.use('/api/ai', aiRoutes);
+
+//
+app.use("/api/contact", supportRoutes )
 
 // Error handling middleware (centralized)
 app.use(errorHandler);
