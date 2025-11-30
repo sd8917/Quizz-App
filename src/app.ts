@@ -16,6 +16,7 @@ import errorHandler from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimit.middleware';
 import logger, { morganStream } from './utils/logger';
 import { supportRoutes } from './routes/v1/support.routes';
+import { feedbackRoutes } from './routes/v1/feedback.routes';
 
 
 const app = express();
@@ -170,8 +171,11 @@ app.use('/api/logs', logsRoutes);
 // AI routes (premium creators only)
 app.use('/api/ai', aiRoutes);
 
-//
-app.use("/api/contact", supportRoutes )
+// Contact/Support routes
+app.use("/api/contact", supportRoutes)
+
+// Feedback routes
+app.use('/api/feedback', feedbackRoutes);
 
 // Error handling middleware (centralized)
 app.use(errorHandler);
