@@ -85,7 +85,7 @@ export const logout = async (req: Request, res: Response, next: NextFunction): P
 
 export const logoutAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const userId =( req.user as any)?.id || (req.user as any)?._id;
 
     if (!userId) {
       return next(new AppAuthError('User not authenticated'));
@@ -162,5 +162,36 @@ export const verifyResetToken = async (req: Request, res: Response, next: NextFu
     sendSuccess(res, { email: result.email }, 'Token is valid');
   } catch (error: any) {
     return next(error);
+  }
+};
+
+export const googleCallback = async (req: Request, res: Response): Promise<void> => {
+  try {
+    let user = req.user as any;
+
+    if (!user) {
+      console.error('[Google Callback] ❌ NO USER OBJECT');
+      res.status(401).send('Authentication failed: No user');
+      return;
+    }
+
+    if (!user.accessToken || !user.refreshToken) {
+      console.error('[Google Callback] ❌ MISSING TOKENS');
+      console.error('[Google Callback] User keys:', Object.keys(user));
+      res.status(401).send('Authentication failed: Missing tokens');
+      return;
+    }
+    // Redirect to frontend with tokens as query parameters
+    // This bypasses CSP inline script issues
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    
+    const redirectUrl = `${frontendUrl}/auth/google/callback?accessToken=${encodeURIComponent(user.accessToken)}&refreshToken=${encodeURIComponent(user.refreshToken)}&email=${encodeURIComponent(user.email)}&username=${encodeURIComponent(user.username)}&&role=${encodeURIComponent(user?.roles[0])}`;
+    // Redirect the popup to the frontend callback URL
+    // Frontend will extract tokens from URL and store them
+    res.redirect(redirectUrl);
+
+  } catch (error: any) {
+    console.error('[Google Callback] ❌ ERROR:', error);
+    res.status(500).send('Server error: ' + error.message);
   }
 };

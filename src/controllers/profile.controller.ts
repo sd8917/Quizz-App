@@ -7,7 +7,7 @@ export class ProfileController {
 
   getMe = async (req: Request, res: Response) => {
     try {
-      const userId = req.user._id || req.user.id;
+      const userId = req.user!._id || (req.user as any).id;
       const data = await this.profileService.getProfile(userId);
       sendSuccess(res, data, 'Profile retrieved successfully');
     } catch (err: any) {
@@ -17,7 +17,7 @@ export class ProfileController {
 
   updateMe = async (req: Request, res: Response) => {
     try {
-      const userId = req.user._id || req.user.id;
+      const userId = req.user!._id || (req.user as any).id;
       const updates = req.body;
       const data = await this.profileService.updateProfile(userId, updates);
       sendSuccess(res, data, 'Profile updated successfully');
