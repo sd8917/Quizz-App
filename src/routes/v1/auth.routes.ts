@@ -352,7 +352,7 @@ router.get('/auth/google', (req, res, next) => {
 // Google callback - Passport authenticates the code, then calls googleCallback
 router.get('/auth/google/callback', (req, res, next) => {
 
-  passport.authenticate('google', { session: false }, (err: any, user: any, info: any) => {
+  passport.authenticate('google', { session: false }, (err: any, user: any) => {
 
     if (err) {
       console.error('[Auth Route] ❌ Passport error:', err);
