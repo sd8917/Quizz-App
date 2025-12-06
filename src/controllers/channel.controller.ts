@@ -9,8 +9,8 @@ import {
 export const channelController = {
   async createChannel(req: Request, res: Response, next: NextFunction) {
     try {
-      const user = req.user;
-      const ownerId = user.id;
+      const user = req.user!;
+      const ownerId = user._id || (user as any).id;
       const { name, description } = req.body;
       
       if (!name) {
@@ -28,7 +28,7 @@ export const channelController = {
   async getChannel(req: Request, res: Response, next: NextFunction) {
     try {
       const { channelId } = req.params;
-      const userId = req.user.id;
+      const userId = req.user!._id || (req.user as any).id;
       const channel = await channelService.getChannel(channelId, userId);
       
       const data = {
@@ -45,8 +45,8 @@ export const channelController = {
 
   async inviteUser(req: Request, res: Response, next: NextFunction) {
     try {
-      const user = req.user;
-      const inviterId = user.id;
+      const user = req.user!;
+      const inviterId = user._id || (user as any).id;
       const { channelId } = req.params;
       const { email, role } = req.body;
       
@@ -65,7 +65,7 @@ export const channelController = {
 
   async deleteChannel(req: Request, res: Response, next: NextFunction) {
     try {
-      const user = req.user;
+      const user = req.user!;
       const { channelId } = req.params;
       const deleted = await channelService.deleteChannel(channelId, user);
       sendSuccess(res, { deleted }, 'Channel and all associated questions deleted successfully');
@@ -77,7 +77,7 @@ export const channelController = {
 
   async listUserChannels(req: Request, res: Response, next: NextFunction) {
     try {
-      const user= req.user;
+      const user = req.user!;
       const channels = await channelService.listUserChannels(user);
       sendSuccess(res, channels, 'Channels retrieved successfully');
     } catch (err) {
@@ -88,7 +88,7 @@ export const channelController = {
   async updateChannel(req: Request, res: Response, next: NextFunction) {
     try {
       const { channelId } = req.params;
-      const userId = req.user.id;
+      const userId = req.user!._id || (req.user as any).id;
       const { name, description } = req.body;
 
       // Validate at least one field is provided

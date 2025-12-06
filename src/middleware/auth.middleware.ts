@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/user.model';
 import { sendUnauthorized } from '../utils/helper';
+import { IUser } from '../types';
 
 interface IDecodedToken {
   id: string;
@@ -11,8 +12,9 @@ interface IDecodedToken {
 
 declare global {
   namespace Express {
-    interface Request {
-      user?: any;
+    interface User extends IUser {
+      accessToken?: string;
+      refreshToken?: string;
     }
   }
 }

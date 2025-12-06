@@ -20,10 +20,21 @@ const UserSchema = new Schema<IUser>({
             'Please enter a valid email address'
         ]
     },
+    googleId: {
+        type: String,
+        required: false,
+        unique: false,
+        sparse: true
+    },
     password: {
         type: String,
         required: [true, 'Password is required'],
         minlength: [6, 'Password must be at least 6 characters']
+    },
+    provider: {
+        type: String,
+        enum: ['local', 'google'],
+        default: 'local'
     },
     roles: [{ type: String }],
     isActive: { type: Boolean, default: true },

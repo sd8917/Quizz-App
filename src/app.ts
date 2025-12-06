@@ -5,6 +5,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './config/swagger';
+import passport from 'passport';
+import { configurePassport } from './config/passport';
 import authRoutes from './routes/v1/auth.routes';
 import channelRoutes from './routes/v1/channel.routes';
 import { quizRoutes } from './routes/v1/quiz.routes';
@@ -26,6 +28,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(helmet());
+
+// Passport (Google OAuth)
+configurePassport();
+app.use(passport.initialize());
 
 // HTTP request logging - logs to both console and file
 app.use(morgan('combined', { stream: morganStream }));
@@ -149,6 +155,20 @@ app.get('/health', (_req, res) => {
 });
 
 // Routes
+
+// Add debug endpoint to see all requests
+{process.env.NODE_ENV =="development" && app.use((req, _res, next) => {
+  if (req.path.includes('google') || req.path.includes('callback')) {
+    console.log('[Request Debug]', {
+      method: req.method,
+      path: req.path,
+      fullUrl: req.originalUrl,
+      query: req.query,
+      timestamp: new Date().toISOString()
+    });
+  }
+  next();
+})}
 
 // add route for auth
 app.use('/api/', authRoutes);

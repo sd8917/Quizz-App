@@ -7,10 +7,12 @@ import {
   logoutAll,
   requestPasswordReset,
   resetPassword,
-  verifyResetToken
+  verifyResetToken,
+  googleCallback
 } from '../../controllers/auth.controller';
 import { protect } from '../../middleware/auth.middleware';
 import { authLimiter, refreshLimiter } from '../../middleware/rateLimit.middleware';
+import passport from 'passport';
 
 const router = express.Router();
 
@@ -341,5 +343,50 @@ router.post('/reset-password', resetPassword);
  *         description: Invalid or expired token
  */
 router.get('/verify-reset-token', verifyResetToken);
+
+// Google OAuth Routes
+router.get('/auth/google', (req, res, next) => {
+  passport.authenticate('google', { scope: ['profile', 'email'], session: false })(req, res, next);
+});
+
+// Google callback - Passport authenticates the code, then calls googleCallback
+router.get('/auth/google/callback', (req, res, next) => {
+
+  passport.authenticate('google', { session: false }, (err: any, user: any, info: any) => {
+
+    if (err) {
+      console.error('[Auth Route] ❌ Passport error:', err);
+      return res.redirect('/api/auth/google/failure');
+    }
+
+    if (!user) {
+      console.error('[Auth Route] ❌ Passport returned no user');
+      return res.redirect('/api/auth/google/failure');
+    }
+
+    if (!user.accessToken || !user.refreshToken) {
+      console.error('[Auth Route] ❌ Passport user missing tokens!');
+      console.error('[Auth Route] User object:', JSON.stringify(user, null, 2));
+    }
+
+    // Set user on request for next middleware
+    req.user = user;
+    next();
+  })(req, res, next);
+}, googleCallback);
+
+router.get('/auth/google/failure', (_req, res) => {
+
+  res.status(401).send(`
+    <!DOCTYPE html>
+    <html>
+      <head><title>Login Failed</title></head>
+      <body style="margin:0;padding:20px;font-family:sans-serif;">
+        <p style="color:red;">✗ Google authentication failed. Please try again.</p>
+        <p><a href=${process.env.FRONTEND_URL || "http://localhost:3000"}>← Back to Login</a></p>
+      </body>
+    </html>
+  `);
+});
 
 export default router;

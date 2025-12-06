@@ -4,6 +4,8 @@ export interface IUser extends Document {
   username: string;
   email: string;
   password: string;
+  googleId?: string;
+  provider?: 'local' | 'google';
   roles: string[];
   createdAt: Date;
   isActive: boolean;
@@ -22,6 +24,7 @@ export interface IUserResponse {
   username: string;
   email: string;
   role: string;
+  provider?: 'local' | 'google';
   isPremium?: boolean;
   premiumExpiresAt?: Date;
   accessToken?: string;

@@ -1,5 +1,6 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
 import crypto from 'crypto';
+import { Profile as GoogleProfile } from 'passport-google-oauth20';
 import { IUser, ILoginRequest, IRegisterRequest, IUserResponse } from '../types';
 import User from '../models/user.model';
 import { RefreshToken } from '../models/refreshToken.model';
@@ -35,7 +36,8 @@ export class AuthService {
       _id: (user._id as string).toString(),
       username: user.username,
       email: user.email,
-      role: user.roles[0],
+      role: user.roles && user.roles.length > 0 ? user.roles[0] : 'user',
+      provider: (user.provider as IUserResponse['provider']) || 'local',
       ...(accessToken && { accessToken }),
       ...(refreshToken && { refreshToken }),
       lastLoginAt: user.lastLoginAt,
@@ -48,8 +50,8 @@ export class AuthService {
     
     const { username, email, password } = userData;
 
-    // Check if user exists
-    const userExists = await User.findOne({ $and: [{ email }, { name: username }] });
+    // Check if user exists by email
+    const userExists = await User.findOne({ email });
     if (userExists) {
       throw new Error('User already exists');
     }
@@ -66,6 +68,44 @@ export class AuthService {
     sendWelcomeEmail(user.email, user.username).catch((err: any) => {
       console.error('Failed to send welcome email:', err);
     });
+
+    const accessToken = AuthService.generateAccessToken((user._id as string).toString());
+    const refreshToken = await AuthService.generateRefreshToken((user._id as string).toString());
+    return AuthService.formatUserResponse(user, accessToken, refreshToken);
+  }
+
+  async loginWithGoogle(profile: GoogleProfile): Promise<IUserResponse> {
+    const email = profile.emails && profile.emails.length > 0 ? profile.emails[0].value : undefined;
+
+    if (!email) {
+      throw new Error('Google account does not have a public email');
+    }
+
+    // Try to find existing user by googleId or email
+    let user = await User.findOne({ $or: [{ googleId: profile.id }, { email }] });
+
+    if (!user) {
+      const username = profile.displayName || email.split('@')[0];
+      const randomPassword = crypto.randomBytes(32).toString('hex');
+
+      user = await User.create({
+        username,
+        email,
+        password: randomPassword,
+        roles: ['user'],
+        googleId: profile.id,
+        provider: 'google',
+        lastLoginAt: new Date(),
+        lastActiveAt: new Date()
+      });
+    } else {
+      // Ensure googleId and provider are set for existing accounts
+      user.googleId = user.googleId || profile.id;
+      user.provider = user.provider || 'google';
+      user.lastLoginAt = new Date();
+      user.lastActiveAt = new Date();
+      await user.save();
+    }
 
     const accessToken = AuthService.generateAccessToken((user._id as string).toString());
     const refreshToken = await AuthService.generateRefreshToken((user._id as string).toString());
