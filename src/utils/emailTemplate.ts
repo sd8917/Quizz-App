@@ -617,3 +617,77 @@ export function getSupportEmailTemplate(
 
   return { html, subject: `[Support] ${subjectLine}` };
 }
+
+/**
+ * Creator Role Request Email Template
+ */
+export function getRoleRequestEmailTemplate(
+  username: string,
+  userEmail: string,
+  userId: string,
+  reason: string,
+  options: EmailTemplateOptions = {}
+): { html: string; subject: string } {
+  const { companyName, supportEmail, websiteUrl } = { ...defaultOptions, ...options };
+  const html = `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>New Creator Role Request</title>
+    <style>
+      body { margin:0; padding:0; background:#f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color:#374151; }
+      .container { max-width: 680px; margin: 28px auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(2,6,23,0.08); }
+      .header { background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); padding: 28px 24px; color: #fff; text-align: left; }
+      .header h1 { margin:0; font-size:20px; letter-spacing: -0.2px; }
+      .sub { margin-top:6px; font-size:13px; opacity:0.92; }
+      .body { padding: 24px; }
+      .meta { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+      .meta .item { background:#f8fafc; border:1px solid #eef2ff; padding:10px 12px; border-radius:8px; font-size:13px; color:#111827; }
+      .message { background:#fafafa; border:1px solid #eef2ff; padding:16px; border-radius:8px; color:#374151; line-height:1.6; }
+      .cta { text-align:center; margin:20px 0; }
+      .review-btn { display:inline-block; text-decoration:none; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color: #fff; padding:12px 22px; border-radius:8px; font-weight:600; }
+      .footer { background:#f9fafb; padding:18px 24px; font-size:13px; color:#6b7280; display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+      .small { font-size:12px; color:#9ca3af; }
+      .badge { display:inline-block; background: #fbbf24; color: #78350f; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-left: 8px; }
+      @media (max-width:600px){ .container{ margin:12px;} .header h1{font-size:18px;} }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🎯 New Creator Role Request <span class="badge">ACTION REQUIRED</span></h1>
+        <div class="sub">A user has requested to become a creator on <strong>${companyName}</strong></div>
+      </div>
+      <div class="body">
+        <div class="meta">
+          <div class="item"><strong>User</strong><br/>${username}</div>
+          <div class="item"><strong>Email</strong><br/>${userEmail}</div>
+          <div class="item"><strong>User ID</strong><br/>${userId}</div>
+          <div class="item"><strong>Requested</strong><br/>${new Date().toLocaleString()}</div>
+        </div>
+
+        <div class="message">
+          <strong>Reason for Request:</strong><br/><br/>
+          ${reason ? reason.replace(/\n/g, '<br/>') : '<em>No reason provided</em>'}
+        </div>
+
+        <div class="cta">
+          <a class="review-btn" href="${websiteUrl}/api/profile/admin/role-requests">Review in Admin Dashboard</a>
+        </div>
+
+        <div class="small">Please review this request and take appropriate action (approve or reject) via your admin dashboard.</div>
+      </div>
+
+      <div class="footer">
+        <div>© ${new Date().getFullYear()} ${companyName}</div>
+        <div>Contact: <a href="mailto:${supportEmail}" style="color:#667eea; text-decoration:none">${supportEmail}</a></div>
+      </div>
+    </div>
+  </body>
+</html>
+  `;
+
+  return { html, subject: `[Action Required] New Creator Role Request from ${username}` };
+}

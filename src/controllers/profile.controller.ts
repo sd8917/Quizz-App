@@ -113,6 +113,18 @@ export class ProfileController {
       sendBadRequest(res, err.message);
     }
   };
+
+  requestCreatorRole = async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!._id || (req.user as any).id;
+      const { reason } = req.body;
+      
+      const roleRequest = await this.profileService.requestCreatorRole(userId, reason);
+      sendSuccess(res, roleRequest, 'Creator role request submitted successfully. An admin will review your request.');
+    } catch (err: any) {
+      sendBadRequest(res, err.message);
+    }
+  };
 }
 
 export const profileController = new ProfileController();

@@ -1,6 +1,7 @@
-import { sendChannelInviteEmail } from '../utils/mailer';
+import { sendChannelInviteEmail, sendRoleRequestEmail } from '../utils/mailer';
 import User from '../models/user.model';
 import { IUser } from '../types/user.types';
+import { RoleRequest } from '../models/roleRequest.model';
 
 export class ProfileService {
   // Helper to format user with activity information
@@ -69,6 +70,51 @@ export class ProfileService {
     const updatedUser = await User.findById(targetUserId).select('-password');
     if (!updatedUser) throw new Error('User not found after update');
     return this.formatUserWithActivity(updatedUser);
+  }
+
+  async requestCreatorRole(userId: string, reason?: string) {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+    
+    // Check if user already has creator role
+    if (user.roles.includes('creator') || user.roles.includes('admin')) {
+      throw new Error('User already has creator or admin role');
+    }
+    
+    // Check if there's already a pending request
+    const existingRequest = await RoleRequest.findOne({ 
+      userId, 
+      status: 'pending' 
+    });
+    
+    if (existingRequest) {
+      throw new Error('You already have a pending role request');
+    }
+    
+    // Create new role request
+    const roleRequest = new RoleRequest({
+      userId,
+      requestedRole: 'creator',
+      reason: reason || 'No reason provided',
+      status: 'pending'
+    });
+    
+    await roleRequest.save();
+    
+    // Send email notification to support
+    try {
+      await sendRoleRequestEmail(
+        user.username,
+        user.email,
+        userId,
+        reason || 'No reason provided'
+      );
+    } catch (emailError) {
+      console.error('Failed to send role request email:', emailError);
+      // Don't fail the request if email fails
+    }
+    
+    return roleRequest;
   }
 }
 

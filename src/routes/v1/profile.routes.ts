@@ -296,5 +296,235 @@ router.put('/user/:userId/roles', strictLimiter, authorizeRoles('admin'), profil
  */
 router.put('/user/:userId/status', strictLimiter, authorizeRoles('admin'), profileController.toggleUserStatus);
 
+/**
+ * @openapi
+ * /api/profile/request-creator-role:
+ *   post:
+ *     tags:
+ *       - Profile
+ *     summary: Request creator role
+ *     description: Submit a request to become a creator. Admins will be notified via email.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 example: I want to create educational quizzes for my students
+ *                 description: Reason for requesting creator role (optional)
+ *     responses:
+ *       200:
+ *         description: Request submitted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                         userId:
+ *                           type: string
+ *                         requestedRole:
+ *                           type: string
+ *                         reason:
+ *                           type: string
+ *                         status:
+ *                           type: string
+ *                         createdAt:
+ *                           type: string
+ *       400:
+ *         description: Bad request (e.g., already has creator role or pending request)
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.post('/request-creator-role', profileController.requestCreatorRole);
+
+/**
+ * @openapi
+ * /api/profile/admin/role-requests:
+ *   get:
+ *     tags:
+ *       - Admin
+ *     summary: Get all role requests (Admin only)
+ *     description: Retrieve all role requests with optional status filter and pagination
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, approved, rejected]
+ *         description: Filter by request status
+ *         example: pending
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 50
+ *         description: Number of items per page (max 100)
+ *         example: 50
+ *     responses:
+ *       200:
+ *         description: Role requests retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         requests:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                               userId:
+ *                                 type: object
+ *                                 properties:
+ *                                   _id:
+ *                                     type: string
+ *                                   username:
+ *                                     type: string
+ *                                   email:
+ *                                     type: string
+ *                               requestedRole:
+ *                                 type: string
+ *                               reason:
+ *                                 type: string
+ *                               status:
+ *                                 type: string
+ *                               createdAt:
+ *                                 type: string
+ *                               reviewedBy:
+ *                                 type: object
+ *                               reviewedAt:
+ *                                 type: string
+ *                               reviewNotes:
+ *                                 type: string
+ *                         pagination:
+ *                           type: object
+ *                           properties:
+ *                             page:
+ *                               type: integer
+ *                             limit:
+ *                               type: integer
+ *                             total:
+ *                               type: integer
+ *                             totalPages:
+ *                               type: integer
+ *       400:
+ *         description: Invalid status parameter
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ */
+router.get('/admin/role-requests', authorizeRoles('admin'), adminController.getRoleRequests);
+
+/**
+ * @openapi
+ * /api/profile/admin/role-requests/{requestId}/approve:
+ *   post:
+ *     tags:
+ *       - Admin
+ *     summary: Approve a role request (Admin only)
+ *     description: Approve a pending role request and grant the user creator role
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: requestId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Role request ID
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reviewNotes:
+ *                 type: string
+ *                 example: Approved based on qualifications
+ *     responses:
+ *       200:
+ *         description: Request approved successfully
+ *       400:
+ *         description: Request already processed
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ *       404:
+ *         description: Request not found
+ */
+router.post('/admin/role-requests/:requestId/approve', strictLimiter, authorizeRoles('admin'), adminController.approveRoleRequest);
+
+/**
+ * @openapi
+ * /api/profile/admin/role-requests/{requestId}/reject:
+ *   post:
+ *     tags:
+ *       - Admin
+ *     summary: Reject a role request (Admin only)
+ *     description: Reject a pending role request
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: requestId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Role request ID
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reviewNotes:
+ *                 type: string
+ *                 example: Insufficient qualifications at this time
+ *     responses:
+ *       200:
+ *         description: Request rejected successfully
+ *       400:
+ *         description: Request already processed
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ *       404:
+ *         description: Request not found
+ */
+router.post('/admin/role-requests/:requestId/reject', strictLimiter, authorizeRoles('admin'), adminController.rejectRoleRequest);
+
 export { router as profileRoutes };
     
