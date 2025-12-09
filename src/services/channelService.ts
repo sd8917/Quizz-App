@@ -62,8 +62,8 @@ export const channelService = {
     if (!channel) throw new ApiError(404, 'Channel not found');
 
     // Check if inviter has permission (must be owner or admin)
-    const isOwner = channel.owner._id.toString() === inviterId;
-    const inviterMember = channel.members.find(m => m.user._id.toString() === inviterId);
+    const isOwner = channel.owner._id.toString() === inviterId.toString();
+    const inviterMember = channel.members.find(m => m.user._id.toString() === inviterId.toString());
     const isAdmin = inviterMember && inviterMember.role === 'admin';
     
     if (!isOwner && !isAdmin) {
