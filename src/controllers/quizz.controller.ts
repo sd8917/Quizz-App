@@ -44,13 +44,14 @@ export class QuizController {
       const { channelId } = req.params;
       const userId = req.user!.id;
 
-      // Check if user is member of channel
+      // Check if user is member of channel or if channel is global
       const channel = await channelService.getChannel(channelId, userId, false);
 
       const isMember = channel.members.some(m => ((m.user._id.toString() === userId) || req.user?.roles?.includes("admin") ));
+      const isGlobal = channel.isGlobal;
   
-      if (!isMember) {
-        return sendForbidden(res, 'You must be a member of this channel to view questions');
+      if (!isMember && !isGlobal) {
+        return sendForbidden(res, 'You must be a member of this channel to view questions, or the channel must be global');
       }
       
       const questions = await this.quizService.getChannelQuestionsForUser(channelId);

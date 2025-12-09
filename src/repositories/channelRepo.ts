@@ -61,6 +61,17 @@ export const channelRepo = {
   },
 
   /**
+   * Get all global (public) channels
+   */
+  async getGlobalChannels(): Promise<IChannel[]> {
+    return Channel.find({ isGlobal: true, isArchived: false })
+      .sort({ createdAt: -1 })
+      .populate('owner', 'username email')
+      .populate('members.user', 'username email')
+      .exec();
+  },
+
+  /**
    * Add member to a channel
    */
   async addMember(

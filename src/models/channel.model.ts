@@ -10,6 +10,7 @@ export interface IChannel extends Document {
   }[];
   isArchived: boolean;
   archivedAt?: Date;
+  isGlobal: boolean; // Global quizzes accessible without channel membership
   // Quiz metadata
   totalQuestions?: number;
   duration?: number; // minutes
@@ -61,6 +62,11 @@ const channelSchema = new Schema<IChannel>(
 
     archivedAt: {
       type: Date,
+    },
+
+    isGlobal: {
+      type: Boolean,
+      default: false,
     },
 
     // Quiz metadata (defaults mirror UI expectations)
