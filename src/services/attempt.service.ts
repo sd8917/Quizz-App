@@ -1,8 +1,9 @@
 import { QuizRepository } from "../repositories/quizRepo";
 import { AttemptRepository } from "../repositories/attempRepo";
+import { channelRepo } from "../repositories/channelRepo";
 import mongoose, { ObjectId } from "mongoose";
 import { Attempt } from "../models/attempt.model";
-import { Channel } from "../models/channel.model";
+import { ApiError } from "../utils/apiError";
 
 export class AttemptService {
   private quizRepo = new QuizRepository();
@@ -10,9 +11,9 @@ export class AttemptService {
 
   async submitQuizAttempt(userId: string, channelId: string, userAnswers: any[]) {
    // Fetch channel to get maxAttempts setting
-    const channel = await Channel.findById(channelId);
+    const channel = await channelRepo.getChannelById(channelId);
     if (!channel) {
-      throw new Error("Channel not found.");
+      throw new ApiError(404, "Channel not found.");
     }
 
     const maxAttempts = channel.maxAttempts || 1;
@@ -21,7 +22,7 @@ export class AttemptService {
     const attemptCount = await this.attemptRepo.countAttemptsByUserAndChannel(userId, channelId);
     
     if (attemptCount >= maxAttempts) {
-      throw new Error(`Maximum attempts (${maxAttempts}) reached for this quiz.`);
+      throw new ApiError(400, `Maximum attempts (${maxAttempts}) reached for this quiz.`);
     }
 
     // 2. Fetch correct questions from DB

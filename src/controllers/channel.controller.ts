@@ -97,6 +97,13 @@ export const channelController = {
         return sendBadRequest(res, 'Please provide at least one field to update (name, description, or maxAttempts)');
       }
 
+      // Validate maxAttempts if provided
+      if (maxAttempts !== undefined) {
+        if (typeof maxAttempts !== 'number' || maxAttempts < 1 || !Number.isInteger(maxAttempts)) {
+          return sendBadRequest(res, 'maxAttempts must be a positive integer (minimum 1)');
+        }
+      }
+
       const updates: { name?: string; description?: string; maxAttempts?: number } = {};
       if (name) updates.name = name;
       if (description !== undefined) updates.description = description;
