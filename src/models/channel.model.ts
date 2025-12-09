@@ -10,6 +10,11 @@ export interface IChannel extends Document {
   }[];
   isArchived: boolean;
   archivedAt?: Date;
+  // Quiz metadata
+  totalQuestions?: number;
+  duration?: number; // minutes
+  passingScore?: number; // percent
+  pointsPerQuestion?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -56,6 +61,32 @@ const channelSchema = new Schema<IChannel>(
 
     archivedAt: {
       type: Date,
+    },
+
+    // Quiz metadata (defaults mirror UI expectations)
+    totalQuestions: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    duration: {
+      type: Number,
+      default: 30,
+      min: 1,
+    },
+
+    passingScore: {
+      type: Number,
+      default: 70,
+      min: 0,
+      max: 100,
+    },
+
+    pointsPerQuestion: {
+      type: Number,
+      default: 1,
+      min: 0.1,
     },
   },
   {
