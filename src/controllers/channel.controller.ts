@@ -29,7 +29,7 @@ export const channelController = {
     try {
       const { channelId } = req.params;
       const userId = req.user!._id || (req.user as any).id;
-      const channel = await channelService.getChannel(channelId, userId);
+      const channel = await channelService.getChannelWithMetadata(channelId, userId);
       
       const data = {
         channel,
@@ -78,7 +78,8 @@ export const channelController = {
   async listUserChannels(req: Request, res: Response, next: NextFunction) {
     try {
       const user = req.user!;
-      const channels = await channelService.listUserChannels(user);
+      const { channelId } = req.query;
+      const channels = await channelService.listUserChannels(user, channelId as string | undefined);
       sendSuccess(res, channels, 'Channels retrieved successfully');
     } catch (err) {
       next(err);

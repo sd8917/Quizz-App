@@ -1,5 +1,6 @@
 import { channelRepo } from '../repositories/channelRepo';
 import { IChannel } from '../models/channel.model';
+import { Question } from '../models/quiz.model';
 import  User  from '../models/user.model';
 // import { publishArchiveJob } from '../workers/queues';
 import mongoose from 'mongoose';
@@ -41,6 +42,23 @@ export const channelService = {
     }
 
     return channel;
+  },
+
+  /**
+   * Get channel plus derived quiz metadata (question count and defaults)
+   */
+  async getChannelWithMetadata(channelId: string, userId: string): Promise<IChannel & { totalQuestions: number }> {
+    const channel = await this.getChannel(channelId, userId, false);
+
+    const totalQuestions = await Question.countDocuments({ channelId });
+
+    const channelObj = channel.toObject() as IChannel & { totalQuestions: number };
+    channelObj.totalQuestions = totalQuestions;
+    channelObj.duration = channel.duration ?? 30;
+    channelObj.passingScore = channel.passingScore ?? 70;
+    channelObj.pointsPerQuestion = channel.pointsPerQuestion ?? 1;
+
+    return channelObj;
   },
 
   /**
@@ -151,8 +169,36 @@ export const channelService = {
   /**
    * List all channels where the user is owner or member
    */
-  async listUserChannels(user: IUserDocument) {
-    // Find channels where user is owner or member
-    return await channelRepo.getChannelsByUser(user);
+  async listUserChannels(user: IUserDocument, channelId?: string) {
+    // If a specific channelId is provided, return that channel with metadata if user has access
+    if (channelId) {
+      const channel = await this.getChannel(channelId, (user as any)._id?.toString() || (user as any).id?.toString() || '', false);
+      const totalQuestions = await Question.countDocuments({ channelId });
+      const channelObj = channel.toObject() as any;
+      channelObj.totalQuestions = totalQuestions;
+      channelObj.duration = channel.duration ?? 30;
+      channelObj.passingScore = channel.passingScore ?? 70;
+      channelObj.pointsPerQuestion = channel.pointsPerQuestion ?? 1;
+      return [channelObj];
+    }
+
+    // Otherwise list all channels for the user
+    const channels = await channelRepo.getChannelsByUser(user);
+
+    // Attach question counts; simple loop to keep logic clear
+    const enriched = await Promise.all(
+      channels.map(async (channel: any) => {
+        const totalQuestions = await Question.countDocuments({ channelId: channel._id });
+        return {
+          ...channel.toObject(),
+          totalQuestions,
+          duration: channel.duration ?? 30,
+          passingScore: channel.passingScore ?? 70,
+          pointsPerQuestion: channel.pointsPerQuestion ?? 1,
+        };
+      })
+    );
+
+    return enriched;
   },
 };
