@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { getWelcomeEmailTemplate, getPasswordResetEmailTemplate, getChannelInviteEmailTemplate } from './emailTemplate';
+import { getWelcomeEmailTemplate, getPasswordResetEmailTemplate, getChannelInviteEmailTemplate, getRoleRequestEmailTemplate } from './emailTemplate';
 import { getSupportEmailTemplate } from './emailTemplate';
 
 const transporter = nodemailer.createTransport({
@@ -81,6 +81,27 @@ export async function sendSupportEmail(fromName: string, fromEmail: string, subj
     subject: `[Support] Action: Alert for sending message- ${subjectLine}`,
     html,
     text: `From: ${fromName} <${fromEmail}>\nSubject: ${subjectLine}\n\n${messageBody}`,
+  };
+
+  await transporter.sendMail(mailOptions);
+}
+
+export async function sendRoleRequestEmail(username: string, userEmail: string, userId: string, reason: string) {
+  const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_USER;
+  const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:8000/api/';
+
+  const { html, subject } = getRoleRequestEmailTemplate(username, userEmail, userId, reason, {
+    websiteUrl,
+    companyName: 'Triviaverse',
+    supportEmail,
+  });
+
+  const mailOptions = {
+    from: `"Triviaverse" <${process.env.EMAIL_USER}>`,
+    to: supportEmail,
+    subject,
+    html,
+    text: `New Creator Role Request\n\nUser: ${username} (${userEmail})\nUser ID: ${userId}\nReason: ${reason || 'No reason provided'}\n\nPlease review this request in the admin dashboard.`,
   };
 
   await transporter.sendMail(mailOptions);

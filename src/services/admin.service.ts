@@ -2,6 +2,7 @@ import User from '../models/user.model';
 import { Question } from '../models/quiz.model';
 import { Attempt } from '../models/attempt.model';
 import { Channel } from '../models/channel.model';
+import { RoleRequest } from '../models/roleRequest.model';
 
 export class AdminService {
   // Returns basic system statistics for admins
@@ -32,6 +33,69 @@ export class AdminService {
       submittedAttempts,
       completionRate
     };
+  }
+
+  // Get all role requests with optional status filter
+  async getRoleRequests(status?: 'pending' | 'approved' | 'rejected') {
+    const filter: any = {};
+    if (status) {
+      filter.status = status;
+    }
+    
+    const requests = await RoleRequest.find(filter)
+      .populate('userId', 'username email')
+      .populate('reviewedBy', 'username email')
+      .sort({ createdAt: -1 })
+      .exec();
+    
+    return requests;
+  }
+
+  // Approve a role request
+  async approveRoleRequest(requestId: string, adminId: string, reviewNotes?: string) {
+    const request = await RoleRequest.findById(requestId).populate('userId');
+    if (!request) throw new Error('Role request not found');
+    
+    if (request.status !== 'pending') {
+      throw new Error('This request has already been processed');
+    }
+    
+    // Update the request status
+    request.status = 'approved';
+    request.reviewedBy = adminId as any;
+    request.reviewedAt = new Date();
+    if (reviewNotes) request.reviewNotes = reviewNotes;
+    await request.save();
+    
+    // Update user role
+    const user = await User.findById(request.userId);
+    if (!user) throw new Error('User not found');
+    
+    // Add creator role if not already present
+    if (!user.roles.includes('creator')) {
+      user.roles.push('creator');
+      await user.save();
+    }
+    
+    return request;
+  }
+
+  // Reject a role request
+  async rejectRoleRequest(requestId: string, adminId: string, reviewNotes?: string) {
+    const request = await RoleRequest.findById(requestId);
+    if (!request) throw new Error('Role request not found');
+    
+    if (request.status !== 'pending') {
+      throw new Error('This request has already been processed');
+    }
+    
+    request.status = 'rejected';
+    request.reviewedBy = adminId as any;
+    request.reviewedAt = new Date();
+    if (reviewNotes) request.reviewNotes = reviewNotes;
+    await request.save();
+    
+    return request;
   }
 }
 
