@@ -207,6 +207,46 @@ The system implements a three-tier role hierarchy:
 
 ` Role assignment `: New users are assigned the 'user' role by default. Admins can promote users to 'creator' or 'admin' via the channel management API.
 
+## 🌐 Global Channels/Quizzes
+
+The system supports **Global Channels** - public quizzes that can be accessed by anyone without requiring channel membership.
+
+**Key Features:**
+- **Admin-only creation**: Only users with the `admin` role can create global channels
+- **Public access**: Any authenticated user can view and take quizzes in global channels
+- **Browse global quizzes**: Users can discover all public quizzes via `GET /api/channel/global`
+- **No membership required**: Users don't need to join global channels to participate
+- **Global label**: Channels marked with `isGlobal: true` display as public quizzes
+
+**Use Cases:**
+- Public quiz competitions
+- Open knowledge assessments
+- Community-wide challenges
+- Demo quizzes for new users
+
+**API Endpoints:**
+```bash
+# List all global channels (any authenticated user)
+GET /api/channel/global
+
+# Create global channel (admin only)
+POST /api/channel/
+{
+  "name": "Public Math Quiz",
+  "description": "Test your math skills",
+  "isGlobal": true
+}
+
+# Access quiz without membership (if channel is global)
+GET /api/quiz/channel/:channelId/questions
+POST /api/quiz/channel/:channelId/submit
+```
+
+**Documentation:**
+- [GLOBAL_CHANNELS_GUIDE.md](./GLOBAL_CHANNELS_GUIDE.md) - Complete API reference
+- [VISUAL_FLOW.md](./VISUAL_FLOW.md) - Architecture and data flow diagrams
+- [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md) - Technical details
+
 ## 🧩 Data Models (MongoDB + Mongoose)
 
 # User
@@ -239,6 +279,8 @@ The system implements a three-tier role hierarchy:
       "role": ["user", "creator", "admin"],
     }
   ],
+  "isGlobal":    Boolean,  // NEW: true for public/global channels
+  "isArchived":  Boolean,
   "createdAt": "2025-11-27T10:00Z",
   "status": "active"
 }
