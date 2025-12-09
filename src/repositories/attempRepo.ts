@@ -14,6 +14,13 @@ export class AttemptRepository {
     return Attempt.findOne({ userId, channelId });
   }
 
+  /**
+   * Count the number of attempts a user has made for a specific channel quiz.
+   */
+  async countAttemptsByUserAndChannel(userId: string, channelId: string) {
+    return Attempt.countDocuments({ userId, channelId });
+  }
+
   async findByUserAndChannel(userId: string, channelId: string) {
     return Attempt.findOne({ userId, channelId });
   }

@@ -13,7 +13,7 @@ export class AttemptController {
       const result = await this.attemptService.submitQuizAttempt(userId, channelId, answers);
       sendCreated(res, result, 'Quiz attempt submitted successfully');
     } catch (err: any) {
-      if (err.message === 'You have already submitted this quiz.') {
+      if (err.message && (err.message.includes('Maximum attempts') || err.message.includes('already submitted'))) {
         return sendBadRequest(res, err.message);
       }
       next(err);
