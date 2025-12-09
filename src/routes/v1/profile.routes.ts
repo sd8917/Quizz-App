@@ -355,7 +355,7 @@ router.post('/request-creator-role', profileController.requestCreatorRole);
  *     tags:
  *       - Admin
  *     summary: Get all role requests (Admin only)
- *     description: Retrieve all role requests with optional status filter
+ *     description: Retrieve all role requests with optional status filter and pagination
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -366,6 +366,23 @@ router.post('/request-creator-role', profileController.requestCreatorRole);
  *           enum: [pending, approved, rejected]
  *         description: Filter by request status
  *         example: pending
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 50
+ *         description: Number of items per page (max 100)
+ *         example: 50
  *     responses:
  *       200:
  *         description: Role requests retrieved successfully
@@ -377,35 +394,49 @@ router.post('/request-creator-role', profileController.requestCreatorRole);
  *                 - type: object
  *                   properties:
  *                     data:
- *                       type: array
- *                       items:
- *                         type: object
- *                         properties:
- *                           _id:
- *                             type: string
- *                           userId:
+ *                       type: object
+ *                       properties:
+ *                         requests:
+ *                           type: array
+ *                           items:
  *                             type: object
  *                             properties:
  *                               _id:
  *                                 type: string
- *                               username:
+ *                               userId:
+ *                                 type: object
+ *                                 properties:
+ *                                   _id:
+ *                                     type: string
+ *                                   username:
+ *                                     type: string
+ *                                   email:
+ *                                     type: string
+ *                               requestedRole:
  *                                 type: string
- *                               email:
+ *                               reason:
  *                                 type: string
- *                           requestedRole:
- *                             type: string
- *                           reason:
- *                             type: string
- *                           status:
- *                             type: string
- *                           createdAt:
- *                             type: string
- *                           reviewedBy:
- *                             type: object
- *                           reviewedAt:
- *                             type: string
- *                           reviewNotes:
- *                             type: string
+ *                               status:
+ *                                 type: string
+ *                               createdAt:
+ *                                 type: string
+ *                               reviewedBy:
+ *                                 type: object
+ *                               reviewedAt:
+ *                                 type: string
+ *                               reviewNotes:
+ *                                 type: string
+ *                         pagination:
+ *                           type: object
+ *                           properties:
+ *                             page:
+ *                               type: integer
+ *                             limit:
+ *                               type: integer
+ *                             total:
+ *                               type: integer
+ *                             totalPages:
+ *                               type: integer
  *       400:
  *         description: Invalid status parameter
  *       401:

@@ -16,15 +16,32 @@ export class AdminController {
 
   async getRoleRequests(req: Request, res: Response, next: NextFunction) {
     try {
-      const { status } = req.query;
+      const { status, page, limit } = req.query;
       
       // Validate status if provided
       if (status && !['pending', 'approved', 'rejected'].includes(status as string)) {
         return sendBadRequest(res, 'Invalid status. Must be one of: pending, approved, rejected');
       }
       
-      const requests = await adminService.getRoleRequests(status as 'pending' | 'approved' | 'rejected' | undefined);
-      return sendSuccess(res, requests, 'Role requests retrieved successfully');
+      // Parse pagination parameters
+      const pageNumber = page ? parseInt(page as string, 10) : 1;
+      const limitNumber = limit ? parseInt(limit as string, 10) : 50;
+      
+      // Validate pagination parameters
+      if (isNaN(pageNumber) || pageNumber < 1) {
+        return sendBadRequest(res, 'Invalid page number. Must be a positive integer.');
+      }
+      
+      if (isNaN(limitNumber) || limitNumber < 1 || limitNumber > 100) {
+        return sendBadRequest(res, 'Invalid limit. Must be between 1 and 100.');
+      }
+      
+      const result = await adminService.getRoleRequests(
+        status as 'pending' | 'approved' | 'rejected' | undefined,
+        pageNumber,
+        limitNumber
+      );
+      return sendSuccess(res, result, 'Role requests retrieved successfully');
     } catch (err) {
       return next(err);
     }

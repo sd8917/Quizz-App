@@ -35,20 +35,35 @@ export class AdminService {
     };
   }
 
-  // Get all role requests with optional status filter
-  async getRoleRequests(status?: 'pending' | 'approved' | 'rejected') {
+  // Get all role requests with optional status filter and pagination
+  async getRoleRequests(status?: 'pending' | 'approved' | 'rejected', page: number = 1, limit: number = 50) {
     const filter: any = {};
     if (status) {
       filter.status = status;
     }
     
-    const requests = await RoleRequest.find(filter)
-      .populate('userId', 'username email')
-      .populate('reviewedBy', 'username email')
-      .sort({ createdAt: -1 })
-      .exec();
+    const skip = (page - 1) * limit;
     
-    return requests;
+    const [requests, total] = await Promise.all([
+      RoleRequest.find(filter)
+        .populate('userId', 'username email')
+        .populate('reviewedBy', 'username email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      RoleRequest.countDocuments(filter).exec()
+    ]);
+    
+    return {
+      requests,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
   }
 
   // Approve a role request
@@ -67,14 +82,18 @@ export class AdminService {
     if (reviewNotes) request.reviewNotes = reviewNotes;
     await request.save();
     
-    // Update user role
-    const user = await User.findById(request.userId);
+    // Update user role using the populated userId
+    const user = request.userId as any;
     if (!user) throw new Error('User not found');
     
+    // Fetch the user document to update roles
+    const userDoc = await User.findById(user._id);
+    if (!userDoc) throw new Error('User not found');
+    
     // Add creator role if not already present
-    if (!user.roles.includes('creator')) {
-      user.roles.push('creator');
-      await user.save();
+    if (!userDoc.roles.includes('creator')) {
+      userDoc.roles.push('creator');
+      await userDoc.save();
     }
     
     return request;
