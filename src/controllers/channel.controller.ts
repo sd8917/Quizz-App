@@ -11,13 +11,19 @@ export const channelController = {
     try {
       const user = req.user!;
       const ownerId = user._id || (user as any).id;
-      const { name, description } = req.body;
+      const { name, description, isGlobal } = req.body;
       
       if (!name) {
         return sendBadRequest(res, 'Channel name is required');
       }
+
+      // Only admins can create global channels
+      const canCreateGlobal = user.roles?.includes('admin');
+      if (isGlobal && !canCreateGlobal) {
+        return sendBadRequest(res, 'Only admins can create global channels');
+      }
       
-      const channel = await channelService.createChannel(ownerId, name, description);
+      const channel = await channelService.createChannel(ownerId, name, description, isGlobal);
       sendCreated(res, channel, 'Channel created successfully');
       return;
     } catch (err) {
@@ -81,6 +87,15 @@ export const channelController = {
       const { channelId } = req.query;
       const channels = await channelService.listUserChannels(user, channelId as string | undefined);
       sendSuccess(res, channels, 'Channels retrieved successfully');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async listGlobalChannels(req: Request, res: Response, next: NextFunction) {
+    try {
+      const channels = await channelService.listGlobalChannels();
+      sendSuccess(res, channels, 'Global channels retrieved successfully');
     } catch (err) {
       next(err);
     }

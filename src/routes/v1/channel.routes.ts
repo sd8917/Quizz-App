@@ -9,6 +9,9 @@ const router = Router();
 // All channel routes require authentication
 router.use(protect);
 
+// List global channels (accessible to all authenticated users)
+router.get('/global', channelController.listGlobalChannels);
+
 // Create channel (creator or admin only)
 router.post('/', authorizeRoles('creator', 'admin'), channelController.createChannel);
 

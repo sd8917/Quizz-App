@@ -11,7 +11,7 @@ export const channelService = {
   /**
    * Create a new channel
    */
-  async createChannel(ownerId: string, name: string, description?: string): Promise<IChannel> {
+  async createChannel(ownerId: string, name: string, description?: string, isGlobal?: boolean): Promise<IChannel> {
     const owner = await User.findById(ownerId);
     if (!owner) throw new ApiError(404, 'Owner not found');
 
@@ -20,6 +20,7 @@ export const channelService = {
       description,
       owner: new mongoose.Types.ObjectId(ownerId),
       members: [{ user: owner._id as mongoose.Types.ObjectId, role: 'creator' }],
+      isGlobal: isGlobal ?? false,
     });
 
     return channel;
@@ -34,11 +35,14 @@ export const channelService = {
 
     // Check member access
     const isOwner = channel.owner._id.toString() === userId;
+    const isMember = channel.members.some(m => m.user._id.toString() === userId);
+    
     // Allow access if:
     // 1. User is owner
     // 2. User is a member
-    if (!isOwner && isMemberCheck) {
-      throw new ApiError(403, 'Access denied - Must be a member or owner of the channel');
+    // 3. Channel is global (public access)
+    if (!isOwner && !isMember && !channel.isGlobal && isMemberCheck) {
+      throw new ApiError(403, 'Access denied - Must be a member or owner of the channel, or the channel must be global');
     }
 
     return channel;
@@ -188,6 +192,29 @@ export const channelService = {
     // Attach question counts; simple loop to keep logic clear
     const enriched = await Promise.all(
       channels.map(async (channel: any) => {
+        const totalQuestions = await Question.countDocuments({ channelId: channel._id });
+        return {
+          ...channel.toObject(),
+          totalQuestions,
+          duration: channel.duration ?? 30,
+          passingScore: channel.passingScore ?? 70,
+          pointsPerQuestion: channel.pointsPerQuestion ?? 1,
+        };
+      })
+    );
+
+    return enriched;
+  },
+
+  /**
+   * List all global (public) channels
+   */
+  async listGlobalChannels() {
+    const globalChannels = await channelRepo.getGlobalChannels();
+
+    // Attach question counts
+    const enriched = await Promise.all(
+      globalChannels.map(async (channel: any) => {
         const totalQuestions = await Question.countDocuments({ channelId: channel._id });
         return {
           ...channel.toObject(),
