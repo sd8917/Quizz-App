@@ -1,9 +1,19 @@
+
+
 import { sendChannelInviteEmail } from '../utils/mailer';
-import User from '../models/user.model';
+import ProfileRepo from '../repositories/profileRepo';
+import redis from '../config/redis';
+import logger from '../utils/logger';
 import { IUser } from '../types/user.types';
 
 export class ProfileService {
-  // Helper to format user with activity information
+
+  /**
+   * Formats a user object by attaching activity-related information.
+   *
+   * @param {Object} user - The user data object
+   */
+
   private formatUserWithActivity(user: IUser) {
     return {
       _id: user._id,
@@ -20,14 +30,35 @@ export class ProfileService {
   }
 
   async getProfile(userId: string) {
-    const user = await User.findById(userId).select('-password');
-    if (!user) throw new Error('User not found');
-    return this.formatUserWithActivity(user);
+    const cacheKey = `profile:${userId}`;
+    const start = Date.now();
+    let fromCache = false;
+    let result;
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        fromCache = true;
+        result = JSON.parse(cached);
+      } else {
+        const user = await ProfileRepo.getUserProfile(userId);
+        if (!user) throw new Error('User not found');
+        result = this.formatUserWithActivity(user);
+        await redis.set(cacheKey, JSON.stringify(result), 'EX', 3600); // cache for 1 hour
+      }
+    } finally {
+      const elapsed = Date.now() - start;
+      if (fromCache) {
+        logger.info(`[ProfileService] Cache HIT for userId=${userId} (${elapsed}ms)`);
+      } else {
+        logger.info(`[ProfileService] Cache MISS for userId=${userId} (${elapsed}ms)`);
+      }
+    }
+    return result;
   }
 
   async updateProfile(userId: string, data: Partial<IUser>) {
     // Load user so that pre-save hooks (password hashing) run when updating password
-    const user = await User.findById(userId);
+    const user = await ProfileRepo.getUserById(userId);
     if (!user) throw new Error('User not found');
 
     if (data.username) user.username = data.username;
@@ -36,7 +67,10 @@ export class ProfileService {
 
     await user.save();
     sendChannelInviteEmail(user.email, "Password change successful");
-    const updatedUser = await User.findById(userId).select('-password');
+    // Invalidate cache
+    const cacheKey = `profile:${userId}`;
+    await redis.del(cacheKey);
+    const updatedUser = await ProfileRepo.getUserProfile(userId);
     if (!updatedUser) throw new Error('User not found after update');
     return this.formatUserWithActivity(updatedUser);
   }
@@ -47,26 +81,32 @@ export class ProfileService {
     if (isActive !== undefined) {
       filter.isActive = isActive;
     }
-    const users = await User.find(filter).select('-password');
+    const users = await ProfileRepo.findAll(filter);
     return users.map(user => this.formatUserWithActivity(user));
   }
 
   async updateUserRoles(targetUserId: string, roles: string[]) {
-    const user = await User.findById(targetUserId);
+    const user = await ProfileRepo.getUserById(targetUserId);
     if (!user) throw new Error('User not found');
     user.roles = roles;
     await user.save();
-    const updatedUser = await User.findById(targetUserId).select('-password');
+    // Invalidate cache
+    const cacheKey = `profile:${targetUserId}`;
+    await redis.del(cacheKey);
+    const updatedUser = await ProfileRepo.getUserProfile(targetUserId);
     if (!updatedUser) throw new Error('User not found after update');
     return this.formatUserWithActivity(updatedUser);
   }
 
   async updateUserStatus(targetUserId: string, isActive: boolean) {
-    const user = await User.findById(targetUserId);
+    const user = await ProfileRepo.getUserById(targetUserId);
     if (!user) throw new Error('User not found');
     user.isActive = isActive;
     await user.save();
-    const updatedUser = await User.findById(targetUserId).select('-password');
+    // Invalidate cache
+    const cacheKey = `profile:${targetUserId}`;
+    await redis.del(cacheKey);
+    const updatedUser = await ProfileRepo.getUserProfile(targetUserId);
     if (!updatedUser) throw new Error('User not found after update');
     return this.formatUserWithActivity(updatedUser);
   }
