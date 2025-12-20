@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { ApiError } from '../utils/apiError';
+import logger from '../utils/logger';
+import { ApiError } from "../utils/apiError";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -13,7 +14,7 @@ export interface AIGeneratedQuestion {
     text: string;
     isCorrect: boolean;
   }>;
-  explanation?: string;
+  // explanation?: string;
 }
 
 export interface GenerateQuestionsRequest {
@@ -28,6 +29,8 @@ export class AIService {
    * Generate multiple-choice questions using Gemini AI
    */
   async generateQuestions(params: GenerateQuestionsRequest): Promise<AIGeneratedQuestion[]> {
+    const startTotal = Date.now();
+    logger.info(`[AIService] generateQuestions called with params: ${JSON.stringify(params)}`);
     if (!process.env.GEMINI_API_KEY) {
       throw new ApiError(500, 'GEMINI_API_KEY is not configured');
     }
@@ -48,7 +51,9 @@ export class AIService {
     }
 
     try {
+      const modelStart = Date.now();
       const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+      logger.info(`[AIService] Model initialization took ${Date.now() - modelStart}ms`);
 
       const prompt = `
 You are an expert quiz question generator. Generate exactly ${numberOfQuestions} multiple-choice questions.
@@ -62,7 +67,6 @@ Requirements:
 2. Only ONE option should be correct (isCorrect: true)
 3. Questions should be clear, unambiguous, and well-structured
 4. Options should be plausible and not obviously wrong
-5. Include a brief explanation for the correct answer
 6. Vary the position of correct answers (don't always make it the first or last option)
 7. For ${difficulty} difficulty: ${this.getDifficultyGuidelines(difficulty)}
 
@@ -78,13 +82,35 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks, just p
         { "text": "Option 3", "isCorrect": false },
         { "text": "Option 4", "isCorrect": false }
       ],
-      "explanation": "Brief explanation of why this is correct"
     }
   ]
 }
 `;
 
+/*
+Formate with explain if needed
+
+{
+  "questions": [
+    {
+      "questionText": "Question here?",
+      "marks": ${marks},
+      "options": [
+        { "text": "Option 1", "isCorrect": false },
+        { "text": "Option 2", "isCorrect": true },
+        { "text": "Option 3", "isCorrect": false },
+        { "text": "Option 4", "isCorrect": false }
+      ],
+      "explanation": "Brief explanation of why this is correct"
+    }
+  ]
+}
+
+*/
+
+      const aiStart = Date.now();
       const result = await model.generateContent(prompt);
+      logger.info(`[AIService] AI generateContent took ${Date.now() - aiStart}ms`);
       const text = result.response.text();
 
       // Clean the response (remove markdown code blocks if present)
@@ -94,34 +120,39 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks, just p
       } else if (cleanedText.startsWith('```')) {
         cleanedText = cleanedText.replace(/```\n?/g, '');
       }
+      logger.info(`[AIService] AI response cleaned. Length: ${cleanedText.length}`);
 
       // Parse JSON
       let parsedData;
       try {
         parsedData = JSON.parse(cleanedText);
       } catch (parseError) {
-        console.error('JSON Parse Error:', parseError);
-        console.error('Raw AI Response:', text);
+        logger.error(`[AIService] JSON Parse Error: ${parseError}`);
+        logger.error(`[AIService] Raw AI Response: ${text}`);
         throw new ApiError(500, 'Failed to parse AI response. Please try again.');
       }
 
       // Validate structure
       if (!parsedData.questions || !Array.isArray(parsedData.questions)) {
+        logger.error(`[AIService] Invalid AI response structure`);
         throw new ApiError(500, 'Invalid AI response structure');
       }
 
       // Validate each question
       const validatedQuestions = parsedData.questions.map((q: any, index: number) => {
         if (!q.questionText || !q.options || !Array.isArray(q.options)) {
+          logger.error(`[AIService] Invalid question structure at index ${index}`);
           throw new ApiError(500, `Invalid question structure at index ${index}`);
         }
 
         if (q.options.length !== 4) {
+          logger.error(`[AIService] Question ${index + 1} must have exactly 4 options`);
           throw new ApiError(500, `Question ${index + 1} must have exactly 4 options`);
         }
 
         const correctCount = q.options.filter((opt: any) => opt.isCorrect === true).length;
         if (correctCount !== 1) {
+          logger.error(`[AIService] Question ${index + 1} must have exactly one correct answer`);
           throw new ApiError(500, `Question ${index + 1} must have exactly one correct answer`);
         }
 
@@ -132,21 +163,23 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks, just p
             text: opt.text,
             isCorrect: opt.isCorrect === true
           })),
-          explanation: q.explanation || ''
+          // explanation: q.explanation || ''
         };
       });
 
       if (validatedQuestions.length !== numberOfQuestions) {
+        logger.error(`[AIService] Expected ${numberOfQuestions} questions but received ${validatedQuestions.length}`);
         throw new ApiError(500, `Expected ${numberOfQuestions} questions but received ${validatedQuestions.length}`);
       }
 
+      logger.info(`[AIService] Question generation successful. Total time: ${Date.now() - startTotal}ms`);
       return validatedQuestions;
 
     } catch (error: any) {
       if (error instanceof ApiError) {
         throw error;
       }
-      console.error('AI Generation Error:', error);
+      logger.error(`[AIService] AI Generation Error: ${error}`);
       throw new ApiError(500, `Failed to generate questions: ${error.message}`);
     }
   }
