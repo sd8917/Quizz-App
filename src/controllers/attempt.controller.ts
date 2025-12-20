@@ -13,9 +13,7 @@ export class AttemptController {
       const result = await this.attemptService.submitQuizAttempt(userId, channelId, answers);
       sendCreated(res, result, 'Quiz attempt submitted successfully');
     } catch (err: any) {
-      if (err.message === 'You have already submitted this quiz.') {
-        return sendBadRequest(res, err.message);
-      }
+      // ApiError will be handled by the global error handler
       next(err);
     }
   };

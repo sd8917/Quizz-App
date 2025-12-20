@@ -15,6 +15,7 @@ export interface IChannel extends Document {
   duration?: number; // minutes
   passingScore?: number; // percent
   pointsPerQuestion?: number;
+  maxAttempts?: number; // maximum attempts allowed per user
   createdAt: Date;
   updatedAt: Date;
 }
@@ -87,6 +88,12 @@ const channelSchema = new Schema<IChannel>(
       type: Number,
       default: 1,
       min: 0.1,
+    },
+
+    maxAttempts: {
+      type: Number,
+      default: 1,
+      min: 1,
     },
   },
   {

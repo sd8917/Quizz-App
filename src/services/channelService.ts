@@ -57,6 +57,7 @@ export const channelService = {
     channelObj.duration = channel.duration ?? 30;
     channelObj.passingScore = channel.passingScore ?? 70;
     channelObj.pointsPerQuestion = channel.pointsPerQuestion ?? 1;
+    channelObj.maxAttempts = channel.maxAttempts ?? 1;
 
     return channelObj;
   },
@@ -104,7 +105,7 @@ export const channelService = {
   async updateChannel(
     channelId: string,
     userId: string,
-    updates: { name?: string; description?: string }
+    updates: { name?: string; description?: string; maxAttempts?: number }
   ): Promise<IChannel> {
     const channel = await channelRepo.getChannelById(channelId);
     if (!channel) throw new ApiError(404, 'Channel not found');
@@ -179,6 +180,7 @@ export const channelService = {
       channelObj.duration = channel.duration ?? 30;
       channelObj.passingScore = channel.passingScore ?? 70;
       channelObj.pointsPerQuestion = channel.pointsPerQuestion ?? 1;
+      channelObj.maxAttempts = channel.maxAttempts ?? 1;
       return [channelObj];
     }
 
@@ -195,6 +197,7 @@ export const channelService = {
           duration: channel.duration ?? 30,
           passingScore: channel.passingScore ?? 70,
           pointsPerQuestion: channel.pointsPerQuestion ?? 1,
+          maxAttempts: channel.maxAttempts ?? 1,
         };
       })
     );

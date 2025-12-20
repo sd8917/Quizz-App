@@ -104,7 +104,7 @@ export const channelRepo = {
    */
   async updateChannel(
     channelId: string,
-    updates: { name?: string; description?: string }
+    updates: { name?: string; description?: string; maxAttempts?: number }
   ): Promise<IChannel | null> {
     return Channel.findByIdAndUpdate(
       channelId,
