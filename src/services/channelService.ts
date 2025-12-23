@@ -11,7 +11,7 @@ export const channelService = {
   /**
    * Create a new channel
    */
-  async createChannel(ownerId: string, name: string, description?: string): Promise<IChannel> {
+  async createChannel(ownerId: string, name: string, description?: string, isPublic: 'public' | 'private' = 'private'): Promise<IChannel> {
     const owner = await User.findById(ownerId);
     if (!owner) throw new ApiError(404, 'Owner not found');
 
@@ -20,6 +20,7 @@ export const channelService = {
       description,
       owner: new mongoose.Types.ObjectId(ownerId),
       members: [{ user: owner._id as mongoose.Types.ObjectId, role: 'creator' }],
+      isPublic,
     });
 
     return channel;
@@ -31,13 +32,14 @@ export const channelService = {
   async getChannel(channelId: string, userId: string, isMemberCheck: boolean = false): Promise<IChannel> {
     const channel = await channelRepo.getChannelById(channelId);
     if (!channel) throw new ApiError(404, 'Channel not found');
-
     // Check member access
     const isOwner = channel.owner._id.toString() === userId;
+    const isMember = channel.members.some(m => m.user._id.toString() === userId);
     // Allow access if:
     // 1. User is owner
     // 2. User is a member
-    if (!isOwner && isMemberCheck) {
+    // 3. Channel is public
+    if (!isOwner && !isMember && channel.isPublic === 'private' && isMemberCheck) {
       throw new ApiError(403, 'Access denied - Must be a member or owner of the channel');
     }
 
@@ -167,7 +169,7 @@ export const channelService = {
   },
 
   /**
-   * List all channels where the user is owner or member
+   * List all channels where the user is owner or member, plus all public channels
    */
   async listUserChannels(user: IUserDocument, channelId?: string) {
     // If a specific channelId is provided, return that channel with metadata if user has access
@@ -182,12 +184,12 @@ export const channelService = {
       return [channelObj];
     }
 
-    // Otherwise list all channels for the user
-    const channels = await channelRepo.getChannelsByUser(user);
+    // Get user's channels (owned or member)
+    const userChannels = await channelRepo.getChannelsByUser(user);
 
     // Attach question counts; simple loop to keep logic clear
     const enriched = await Promise.all(
-      channels.map(async (channel: any) => {
+      userChannels.map(async (channel: any) => {
         const totalQuestions = await Question.countDocuments({ channelId: channel._id });
         return {
           ...channel.toObject(),

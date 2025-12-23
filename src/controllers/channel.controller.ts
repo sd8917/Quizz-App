@@ -11,13 +11,13 @@ export const channelController = {
     try {
       const user = req.user!;
       const ownerId = user._id || (user as any).id;
-      const { name, description } = req.body;
-      
+      const { name, description, isPublic } = req.body;
+
       if (!name) {
         return sendBadRequest(res, 'Channel name is required');
       }
-      
-      const channel = await channelService.createChannel(ownerId, name, description);
+
+      const channel = await channelService.createChannel(ownerId, name, description, isPublic);
       sendCreated(res, channel, 'Channel created successfully');
       return;
     } catch (err) {

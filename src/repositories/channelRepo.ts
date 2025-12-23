@@ -50,7 +50,8 @@ export const channelRepo = {
     return Channel.find({
       $or: [
         { owner: userId },
-        { 'members': { $elemMatch: { user: userId } } }
+        { 'members': { $elemMatch: { user: userId } } },
+        { isPublic: 'public' }
       ],
       isArchived: false
     })
@@ -142,6 +143,15 @@ export const channelRepo = {
   async deleteArchivedChannels(): Promise<number> {
     const res = await Channel.deleteMany({ isArchived: true }).exec();
     return res.deletedCount || 0;
+  },
+
+  /**
+   * Get all public channels
+   */
+  async getPublicChannels(): Promise<IChannel[]> {
+    return Channel.find({ isPublic: 'public', isArchived: false })
+      .sort({ createdAt: -1 })
+      .exec();
   },
 
   /**

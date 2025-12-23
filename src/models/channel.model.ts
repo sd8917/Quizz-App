@@ -8,6 +8,7 @@ export interface IChannel extends Document {
     user: mongoose.Types.ObjectId;
     role: 'admin' | 'team' | 'creator';
   }[];
+  isPublic: 'public' | 'private';
   isArchived: boolean;
   archivedAt?: Date;
   // Quiz metadata
@@ -53,6 +54,12 @@ const channelSchema = new Schema<IChannel>(
         },
       },
     ],
+
+    isPublic: {
+      type: String,
+      enum: ['public', 'private'],
+      default: 'private',
+    },
 
     isArchived: {
       type: Boolean,
