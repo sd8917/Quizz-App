@@ -2,6 +2,9 @@ import { QuizRepository } from "../repositories/quizRepo";
 import { AttemptRepository } from "../repositories/attempRepo";
 import mongoose, { ObjectId } from "mongoose";
 import { Attempt } from "../models/attempt.model";
+import { RuleViolation } from "../models/ruleViolation.model";
+import logger from "../utils/logger";
+import { sendSupportEmail } from "../utils/mailer";
 
 export class AttemptService {
   private quizRepo = new QuizRepository();
@@ -85,4 +88,40 @@ async getLeaderboard(channelId: string) {
     }
   ]);
 }
+
+  async handleFullscreenViolation(userId: string, channelId: string, exitCount: number) {
+    // Check if exitCount exceeds the threshold (more than 3)
+    if (exitCount <= 3) {
+      return { message: 'Exit count within allowed limit', exitCount };
+    }
+
+    // Create a rule violation record
+    const violation = await RuleViolation.create({
+      userId,
+      channelId,
+      reason: `User exited fullscreen mode ${exitCount} times, exceeding the limit of 3.`,
+      exitCount,
+    });
+
+    // Log the violation
+    logger.warn(`Fullscreen violation: User ${userId} in channel ${channelId} exited fullscreen ${exitCount} times`);
+
+    // Send alert email to admin
+    try {
+      await sendSupportEmail(
+        'System Alert',
+        process.env.SUPPORT_EMAIL as string, // Assuming admin email
+        `Fullscreen Violation Alert`,
+        `User ${userId} in channel ${channelId} has exited fullscreen mode ${exitCount} times. Violation recorded.`
+      );
+    } catch (emailError) {
+      logger.error('Failed to send admin alert email:', emailError);
+    }
+
+    return {
+      message: 'Rule violation recorded and admin alerted',
+      violationId: violation._id,
+      exitCount,
+    };
+  }
 }
