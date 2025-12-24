@@ -17,6 +17,7 @@ export interface IChannel extends Document {
   pointsPerQuestion?: number;
   createdAt: Date;
   updatedAt: Date;
+  isPublic: 'public' | 'private';
 }
 
 const channelSchema = new Schema<IChannel>(
@@ -53,6 +54,12 @@ const channelSchema = new Schema<IChannel>(
         },
       },
     ],
+    isPublic: {
+      type: String,
+      enum: ['public', 'private'],
+      default: 'private',
+      index: true,
+    },
 
     isArchived: {
       type: Boolean,

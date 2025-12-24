@@ -44,21 +44,22 @@ export class QuizController {
       const { channelId } = req.params;
       const userId = req.user!.id;
 
-      // Check if user is member of channel
+      // Check if user is member of channel or if channel is public
       const channel = await channelService.getChannel(channelId, userId, false);
 
       const isMember = channel.members.some(m => ((m.user._id.toString() === userId) || req.user?.roles?.includes("admin") ));
-  
-      if (!isMember) {
+      const isPublic = channel.isPublic === 'public';
+
+      if (!isMember && !isPublic) {
         return sendForbidden(res, 'You must be a member of this channel to view questions');
       }
-      
+
       const questions = await this.quizService.getChannelQuestionsForUser(channelId);
       sendSuccess(res, questions, 'Questions retrieved successfully');
     } catch (err) {
       next(err);
     }
-  };  // ✅ User submits quiz
+  };
   submitQuiz = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { channelId } = req.params;
