@@ -16,4 +16,7 @@ router.get("/user", attemptController.getUserAttempts);
 // Channel leaderboard
 router.get("/channel/:channelId/leaderboard", attemptController.getLeaderboard);
 
+// Handle fullscreen violation
+router.post("/channel/:channelId/fullscreen-violation", attemptController.handleFullscreenViolation);
+
 export { router as attemptRoutes };

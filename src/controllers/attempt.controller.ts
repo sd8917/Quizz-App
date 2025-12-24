@@ -43,4 +43,22 @@ export class AttemptController {
       next(err);
     }
   };
+
+  handleFullscreenViolation = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user!.id;
+      const { channelId } = req.params;
+      const { exitCount } = req.body;
+
+      if (typeof exitCount !== 'number' || exitCount < 0) {
+        return sendBadRequest(res, 'Invalid exitCount provided');
+      }
+
+      const result = await this.attemptService.handleFullscreenViolation(userId, channelId, exitCount);
+
+      sendSuccess(res, result, 'Fullscreen violation handled successfully');
+    } catch (err) {
+      next(err);
+    }
+  };
 }
