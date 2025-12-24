@@ -11,7 +11,8 @@ export const channelService = {
   /**
    * Create a new channel
    */
-  async createChannel(ownerId: string, name: string, description?: string): Promise<IChannel> {
+  async createChannel(ownerId: string, name: string, description?: string, isPublic: 'public' | 'private' = 'private'): Promise<IChannel> {
+
     const owner = await User.findById(ownerId);
     if (!owner) throw new ApiError(404, 'Owner not found');
 
@@ -20,6 +21,7 @@ export const channelService = {
       description,
       owner: new mongoose.Types.ObjectId(ownerId),
       members: [{ user: owner._id as mongoose.Types.ObjectId, role: 'creator' }],
+      isPublic,
     });
 
     return channel;
@@ -34,10 +36,12 @@ export const channelService = {
 
     // Check member access
     const isOwner = channel.owner._id.toString() === userId;
+    const isMember = channel.members.some(m => m.user._id.toString() === userId);
     // Allow access if:
     // 1. User is owner
     // 2. User is a member
-    if (!isOwner && isMemberCheck) {
+    // 3. Channel is public
+    if (!isOwner && !isMember && channel.isPublic === 'private' && isMemberCheck) {
       throw new ApiError(403, 'Access denied - Must be a member or owner of the channel');
     }
 
@@ -114,8 +118,7 @@ export const channelService = {
     const isAdmin = channel.members.some(
       m => m.user._id.toString() === userId && m.role === 'admin'
     );
-
-    if (!isOwner && !isAdmin) {
+    if ((!isOwner && (!isAdmin && !(channel?.isPublic=="public")))) {
       throw new ApiError(403, 'Only channel owner or admins can update channel details');
     }
 

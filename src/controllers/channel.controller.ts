@@ -90,17 +90,17 @@ export const channelController = {
     try {
       const { channelId } = req.params;
       const userId = req.user!._id || (req.user as any).id;
-      const { name, description } = req.body;
+      const { name, description, isPublic } = req.body;
 
       // Validate at least one field is provided
       if (!name && !description) {
         return sendBadRequest(res, 'Please provide at least one field to update (name or description)');
       }
 
-      const updates: { name?: string; description?: string } = {};
+      const updates: { name?: string; description?: string ,isPublic?: string} = {};
       if (name) updates.name = name;
       if (description !== undefined) updates.description = description;
-
+      if(isPublic) updates.isPublic= isPublic;
       const updatedChannel = await channelService.updateChannel(channelId, userId, updates);
       sendSuccess(res, updatedChannel, 'Channel updated successfully');
       return;

@@ -50,7 +50,8 @@ export const channelRepo = {
     return Channel.find({
       $or: [
         { owner: userId },
-        { 'members': { $elemMatch: { user: userId } } }
+        { 'members': { $elemMatch: { user: userId } } },
+        { isPublic: 'public' }
       ],
       isArchived: false
     })
