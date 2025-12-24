@@ -35,15 +35,20 @@ export class ProfileService {
     let fromCache = false;
     let result;
     try {
-      const cached = await redis.get(cacheKey);
-      if (cached) {
-        fromCache = true;
-        result = JSON.parse(cached);
-      } else {
+      if (redis) {
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+          fromCache = true;
+          result = JSON.parse(cached);
+        }
+      }
+      if (!result) {
         const user = await ProfileRepo.getUserProfile(userId);
         if (!user) throw new Error('User not found');
         result = this.formatUserWithActivity(user);
-        await redis.set(cacheKey, JSON.stringify(result), 'EX', 3600); // cache for 1 hour
+        if (redis) {
+          await redis.set(cacheKey, JSON.stringify(result), 'EX', 3600); // cache for 1 hour
+        }
       }
     } finally {
       const elapsed = Date.now() - start;
@@ -69,7 +74,9 @@ export class ProfileService {
     sendChannelInviteEmail(user.email, "Password change successful");
     // Invalidate cache
     const cacheKey = `profile:${userId}`;
-    await redis.del(cacheKey);
+    if (redis) {
+      await redis.del(cacheKey);
+    }
     const updatedUser = await ProfileRepo.getUserProfile(userId);
     if (!updatedUser) throw new Error('User not found after update');
     return this.formatUserWithActivity(updatedUser);
@@ -92,7 +99,9 @@ export class ProfileService {
     await user.save();
     // Invalidate cache
     const cacheKey = `profile:${targetUserId}`;
-    await redis.del(cacheKey);
+    if (redis) {
+      await redis.del(cacheKey);
+    }
     const updatedUser = await ProfileRepo.getUserProfile(targetUserId);
     if (!updatedUser) throw new Error('User not found after update');
     return this.formatUserWithActivity(updatedUser);
@@ -105,7 +114,9 @@ export class ProfileService {
     await user.save();
     // Invalidate cache
     const cacheKey = `profile:${targetUserId}`;
-    await redis.del(cacheKey);
+    if (redis) {
+      await redis.del(cacheKey);
+    }
     const updatedUser = await ProfileRepo.getUserProfile(targetUserId);
     if (!updatedUser) throw new Error('User not found after update');
     return this.formatUserWithActivity(updatedUser);
