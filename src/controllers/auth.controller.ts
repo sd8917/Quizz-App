@@ -20,7 +20,7 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     res.cookie('refreshToken', user.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: "none",
       maxAge: parseInt(process.env.REFRESH_TOKEN_EXPIRY as string), // 30 days
     });
 
@@ -57,7 +57,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     res.cookie('refreshToken', user.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',        // ❗ must be false on http
-      sameSite: "strict",      // ✅ works for localhost
+      sameSite: "none",      // ✅ works for localhost
       maxAge: parseInt(process.env.REFRESH_TOKEN_EXPIRY as string)
     });
 
@@ -221,7 +221,7 @@ export const googleCallback = async (req: Request, res: Response): Promise<void>
     res.cookie('refreshToken', user.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',        // ❗ must be false on http
-      sameSite: "strict",      // ✅ works for localhost
+      sameSite: "none",      // ✅ works for localhost
       maxAge:  parseInt(process.env.REFRESH_TOKEN_EXPIRY as string),
     });
 
