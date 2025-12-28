@@ -155,7 +155,7 @@ router.post('/login', authLimiter, login);
  *         description: 'Too many requests (rate limit: 20 per 15 minutes)'
  */
 // Apply moderate rate limiting to token refresh
-router.post('/refresh', refreshLimiter, refreshToken);
+router.get('/refresh', refreshLimiter, refreshToken);
 
 /**
  * @openapi

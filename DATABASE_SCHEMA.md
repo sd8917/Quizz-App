@@ -1,5 +1,7 @@
 # Database Schema Diagram (ERD)
 
+![alt text](blogs.png)
+
 Below is a textual Entity-Relationship Diagram (ERD) for the Quizz-App backend. You can use this as a reference for database structure, relationships, and for generating a visual diagram in tools like dbdiagram.io, Lucidchart, or draw.io.
 
 ---

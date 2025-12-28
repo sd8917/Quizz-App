@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './config/swagger';
 import passport from 'passport';
@@ -26,7 +27,11 @@ const app = express();
 // --- Core middlewares ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+app.use(cookieParser());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production'? "https://triviaverse.site":"http://localhost:3000", // frontend
+  credentials: true,               // 🔥 REQUIRED
+}));
 app.use(helmet());
 
 // Passport (Google OAuth)
@@ -157,18 +162,20 @@ app.get('/health', (_req, res) => {
 // Routes
 
 // Add debug endpoint to see all requests
-{process.env.NODE_ENV =="development" && app.use((req, _res, next) => {
-  if (req.path.includes('google') || req.path.includes('callback')) {
-    console.log('[Request Debug]', {
-      method: req.method,
-      path: req.path,
-      fullUrl: req.originalUrl,
-      query: req.query,
-      timestamp: new Date().toISOString()
-    });
-  }
-  next();
-})}
+{
+  process.env.NODE_ENV == "development" && app.use((req, _res, next) => {
+    if (req.path.includes('google') || req.path.includes('callback')) {
+      console.log('[Request Debug]', {
+        method: req.method,
+        path: req.path,
+        fullUrl: req.originalUrl,
+        query: req.query,
+        timestamp: new Date().toISOString()
+      });
+    }
+    next();
+  })
+}
 
 // add route for auth
 app.use('/api/', authRoutes);
