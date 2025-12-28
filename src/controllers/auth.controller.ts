@@ -15,7 +15,20 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     };
 
     const user = await authService.register(userData);
-    sendCreated(res, user, 'User registered successfully');
+
+    // Set refresh token in HTTP-only cookie
+    res.cookie('refreshToken', user.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: parseInt(process.env.REFRESH_TOKEN_EXPIRY as string), // 30 days
+    });
+
+    // Remove refreshToken from response body
+    const responseUser = { ...user };
+    delete responseUser.refreshToken;
+
+    sendCreated(res, responseUser, 'User registered successfully');
   } catch (error: any) {
     // Let centralized handler format Mongoose validation errors
     if (error && error.name === 'ValidationError') {
@@ -39,6 +52,18 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     };
 
     const user = await authService.login(credentials);
+
+     // Set refresh token in HTTP-only cookie
+    res.cookie('refreshToken', user.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',        // ❗ must be false on http
+      sameSite: "strict",      // ✅ works for localhost
+      maxAge: parseInt(process.env.REFRESH_TOKEN_EXPIRY as string)
+    });
+
+    // Do not sent refresh token in response
+    delete user.refreshToken;
+    
     sendSuccess(res, user, 'Login successful');
   } catch (error: any) {
     if (error && error.message === 'Invalid credentials') {
@@ -51,7 +76,8 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
 
 export const refreshToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { refreshToken } = req.body;
+    // Read refresh token from HTTP-only cookie
+    const refreshToken = req.cookies.refreshToken;
 
     if (!refreshToken) {
       return next(new AppAuthError('Refresh token is required'));
@@ -70,13 +96,22 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
 
 export const logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { refreshToken } = req.body;
+    // Read refresh token from HTTP-only cookie
+    const refreshToken = req.cookies.refreshToken;
 
     if (!refreshToken) {
       return next(new AppValidationError('Refresh token is required'));
     }
 
     await authService.logout(refreshToken);
+
+    // Clear the refresh token cookie
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',        // ❗ must be false on http
+      sameSite: "strict",      // ✅ works for localhost
+    });
+
     sendSuccess(res, null, 'Logged out successfully');
   } catch (error: any) {
     return next(error);
@@ -181,13 +216,22 @@ export const googleCallback = async (req: Request, res: Response): Promise<void>
       res.status(401).send('Authentication failed: Missing tokens');
       return;
     }
-    // Redirect to frontend with tokens as query parameters
+
+    // Set refresh token in HTTP-only cookie
+    res.cookie('refreshToken', user.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',        // ❗ must be false on http
+      sameSite: "strict",      // ✅ works for localhost
+      maxAge:  parseInt(process.env.REFRESH_TOKEN_EXPIRY as string),
+    });
+
+    // Redirect to frontend with only access token in query parameters
     // This bypasses CSP inline script issues
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    
-    const redirectUrl = `${frontendUrl}/auth/google/callback?accessToken=${encodeURIComponent(user.accessToken)}&refreshToken=${encodeURIComponent(user.refreshToken)}&email=${encodeURIComponent(user.email)}&username=${encodeURIComponent(user.username)}&&role=${encodeURIComponent(user?.roles[0])}`;
+
+    const redirectUrl = `${frontendUrl}/auth/google/callback?accessToken=${encodeURIComponent(user.accessToken)}&email=${encodeURIComponent(user.email)}&username=${encodeURIComponent(user.username)}&role=${encodeURIComponent(user?.roles[0])}`;
     // Redirect the popup to the frontend callback URL
-    // Frontend will extract tokens from URL and store them
+    // Frontend will extract access token from URL and store it, refresh token is in cookie
     res.redirect(redirectUrl);
 
   } catch (error: any) {
