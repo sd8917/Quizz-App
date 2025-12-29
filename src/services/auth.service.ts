@@ -19,7 +19,9 @@ export class AuthService {
   private static async generateRefreshToken(userId: string): Promise<string> {
     const token = crypto.randomBytes(64).toString('hex');
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + parseInt(process.env.REFRESH_TOKEN_EXPIRY || '30')); // 30 days from now
+    const expiryDays = parseInt(process.env.REFRESH_TOKEN_EXPIRY || '30', 10);
+    const daysToAdd = isNaN(expiryDays) ? 30 : Math.max(1, expiryDays); // Ensure at least 1 day
+    expiresAt.setDate(expiresAt.getDate() + daysToAdd);
 
     await RefreshToken.create({
       userId,

@@ -17,11 +17,14 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     const user = await authService.register(userData);
 
     // Set refresh token in HTTP-only cookie
+    const expiryDays = parseInt(process.env.REFRESH_TOKEN_EXPIRY || '30', 10);
+    const maxAge = (isNaN(expiryDays) ? 30 : Math.max(1, expiryDays)) * 24 * 60 * 60 * 1000; // Convert days to milliseconds
+
     res.cookie('refreshToken', user.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: "none",
-      maxAge: parseInt(process.env.REFRESH_TOKEN_EXPIRY as string), // 30 days
+      maxAge,
     });
 
     // Remove refreshToken from response body
@@ -54,11 +57,14 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     const user = await authService.login(credentials);
 
      // Set refresh token in HTTP-only cookie
+    const expiryDays = parseInt(process.env.REFRESH_TOKEN_EXPIRY || '30', 10);
+    const maxAge = (isNaN(expiryDays) ? 30 : Math.max(1, expiryDays)) * 24 * 60 * 60 * 1000; // Convert days to milliseconds
+
     res.cookie('refreshToken', user.refreshToken, {
-      httpOnly: true,
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',        // ❗ must be false on http
       sameSite: "none",      // ✅ works for localhost
-      maxAge: parseInt(process.env.REFRESH_TOKEN_EXPIRY as string)
+      maxAge
     });
 
     // Do not sent refresh token in response
@@ -109,7 +115,7 @@ export const logout = async (req: Request, res: Response, next: NextFunction): P
     res.clearCookie('refreshToken', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',        // ❗ must be false on http
-      sameSite: "strict",      // ✅ works for localhost
+      sameSite: "none",      // ✅ works for localhost
     });
 
     sendSuccess(res, null, 'Logged out successfully');
@@ -218,11 +224,14 @@ export const googleCallback = async (req: Request, res: Response): Promise<void>
     }
 
     // Set refresh token in HTTP-only cookie
+    const expiryDays = parseInt(process.env.REFRESH_TOKEN_EXPIRY || '30', 10);
+    const maxAge = (isNaN(expiryDays) ? 30 : Math.max(1, expiryDays)) * 24 * 60 * 60 * 1000; // Convert days to milliseconds
+
     res.cookie('refreshToken', user.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',        // ❗ must be false on http
       sameSite: "none",      // ✅ works for localhost
-      maxAge:  parseInt(process.env.REFRESH_TOKEN_EXPIRY as string),
+      maxAge,
     });
 
     // Redirect to frontend with only access token in query parameters
