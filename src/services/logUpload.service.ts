@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { bucketName, validateS3Config } from '../config/s3';
 import logger from '../utils/logger';
+import LogsService from './logs.service';
 
 export class LogUploadService {
   private static logFiles = ['logs/combined.log', 'logs/error.log'];
@@ -33,31 +34,35 @@ export class LogUploadService {
         worker.on('message', (message) => {
           if (message.success) {
             logger.info(`[✅ LogUploadService] Successfully uploaded ${filePath} to S3: ${message.data}`);
+            // Delete the local file after successful upload
+            const fileName = path.basename(filePath, '.log');
+            LogsService.clearLogs(fileName).catch((error: any) => {
+              logger.error(`❌ Failed to delete local file ${filePath} after upload: ${error.message}`);
+            });
           } else {
-            logger.error(`[LogUploadService] Failed to upload ${filePath}: ${message.error}`);
+            logger.error(`❌ [LogUploadService] Failed to upload ${filePath}: ${message.error}`);
           }
           resolve();
         });
 
         worker.on('error', (error) => {
-          logger.error(`Worker error for ${filePath}: ${error.message}`);
+          logger.error(`❌ Worker error for ${filePath}: ${error.message}`);
           reject(error);
         });
 
         worker.on('exit', (code) => {
           if (code !== 0) {
-            logger.error(`Worker stopped with exit code ${code} for ${filePath}`);
+            logger.error(`❌ Worker stopped with exit code ${code} for ${filePath}`);
           }
         });
       });
     });
 
     try {
-      console.log("processing  ..... ", uploadPromises)
       await Promise.all(uploadPromises);
       logger.info('`[✅ LogUploadService] All log uploads completed');
     } catch (error) {
-      logger.error('Error during log uploads:', error);
+      logger.error('❌ Error during log uploads:', error);
     }
   }
 }

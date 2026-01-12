@@ -204,8 +204,8 @@ app.use("/api/contact", supportRoutes)
 // Feedback routes
 app.use('/api/feedback', feedbackRoutes);
 
-// Schedule log upload to S3 every 2 days at midnight
-cron.schedule('*/15 * * * *', async () => {
+// Schedule log upload to S3 every 3 days at midnight
+cron.schedule('0 0 */3 * *', async () => {
   logger.info('[✅app.ts] Scheduled log upload to S3 starting...');
   try {
     await LogUploadService.uploadLogs();
