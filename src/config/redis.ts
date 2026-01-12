@@ -13,16 +13,16 @@ try {
   });
 
   redis.on('connect', () => {
-    logger.info('Redis connected successfully');
+    logger.info('✅ Redis connected successfully');
   });
 
   redis.on('error', (err) => {
-    logger.error('Redis connection error:', err.message);
+    logger.error('❌ Redis connection error:', err.message);
     redis = null;
   });
 
 } catch (error) {
-  logger.error('Redis initialization failed:', error.message);
+  logger.error('❌ Redis initialization failed:', error.message);
   redis = null;
 }
 

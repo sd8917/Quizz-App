@@ -269,10 +269,10 @@ class LogsService {
         throw new Error(`Log file '${fileName}.log' not found`);
       }
 
-      // Write empty string to clear the file
-      fs.writeFileSync(filePath, '');
+      // Delete the file
+      await fs.promises.unlink(filePath);
     } catch (error: any) {
-      throw new Error(`Failed to clear logs: ${error.message}`);
+      throw new Error(`Failed to delete logs: ${error.message}`);
     }
   }
 }
