@@ -21,7 +21,8 @@ import { apiLimiter } from './middleware/rateLimit.middleware';
 import logger, { morganStream } from './utils/logger';
 import { supportRoutes } from './routes/v1/support.routes';
 import { feedbackRoutes } from './routes/v1/feedback.routes';
-
+import { LogUploadService } from './services/logUpload.service';
+import * as cron from 'node-cron';
 
 const app = express();
 
@@ -164,7 +165,7 @@ app.get('/health', (_req, res) => {
 {
   process.env.NODE_ENV == "development" && app.use((req, _res, next) => {
     if (req.path.includes('google') || req.path.includes('callback')) {
-      console.log('[Request Debug]', {
+      console.log('🚀 [Request Debug]', {
         method: req.method,
         path: req.path,
         fullUrl: req.originalUrl,
@@ -202,6 +203,17 @@ app.use("/api/contact", supportRoutes)
 
 // Feedback routes
 app.use('/api/feedback', feedbackRoutes);
+
+// Schedule log upload to S3 every 2 days at midnight
+cron.schedule('*/15 * * * *', async () => {
+  logger.info('[✅app.ts] Scheduled log upload to S3 starting...');
+  try {
+    await LogUploadService.uploadLogs();
+    logger.info('[✅app.ts LogUploadServuce ] Scheduled log upload completed successfully from worker and received in parent');
+  } catch (error) {
+    logger.error('❌ Scheduled log upload failed:', error);
+  }
+});
 
 // Error handling middleware (centralized)
 app.use(errorHandler);

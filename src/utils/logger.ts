@@ -8,7 +8,7 @@ const logger = createLogger({
     format.splat(),
     format.json()
   ),
-  defaultMeta: { service: 'blog-api' },
+  defaultMeta: { service: 'triviaverse-api' },
   transports: [
     new transports.Console({
       format: format.combine(
