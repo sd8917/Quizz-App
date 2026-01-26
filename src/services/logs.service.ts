@@ -134,7 +134,15 @@ class LogsService {
 
       // Check if file exists
       if (!fs.existsSync(filePath)) {
-        throw new Error(`Log file '${fileName}.log' not found`);
+        // Return empty logs response when file doesn't exist (e.g., after cron job deletion)
+        return {
+          logs: [],
+          total: 0,
+          page,
+          pageSize,
+          totalPages: 0,
+          file: fileName,
+        };
       }
 
       // Read the file
