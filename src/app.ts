@@ -23,6 +23,7 @@ import { supportRoutes } from './routes/v1/support.routes';
 import { feedbackRoutes } from './routes/v1/feedback.routes';
 import { LogUploadService } from './services/logUpload.service';
 import * as cron from 'node-cron';
+import { ragRoutes } from './routes/v1/rag.routes';
 
 const app = express();
 
@@ -203,6 +204,9 @@ app.use("/api/contact", supportRoutes)
 
 // Feedback routes
 app.use('/api/feedback', feedbackRoutes);
+
+// rag routes
+app.use('/api/rag', ragRoutes)
 
 // Schedule log upload to S3 every 3 days at midnight
 cron.schedule('0 0 */3 * *', async () => {
