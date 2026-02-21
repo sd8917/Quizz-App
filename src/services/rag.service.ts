@@ -1,6 +1,6 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// import { GoogleGenerativeAI } from "@google/generative-ai";//DEPRECATED : https://ai.google.dev/gemini-api/docs/changelog#01-14-2026
+import { GoogleGenAI } from "@google/genai";
 import { MongoDBAtlasVectorSearch } from "@langchain/mongodb";
-import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import mongoose from "mongoose";
 import logger from '../utils/logger';
 import { ApiError } from "../utils/apiError";
@@ -8,6 +8,48 @@ import User from "../models/user.model";
 import { Channel } from "../models/channel.model";
 import { Question } from "../models/quiz.model";
 import { Attempt } from "../models/attempt.model";
+
+/* =========================================================
+   Custom Gemini Embedding Wrapper (for LangChain)
+========================================================= */
+
+class GeminiEmbeddings {
+  private ai: GoogleGenAI;
+
+  constructor(apiKey: string) {
+    this.ai = new GoogleGenAI({ apiKey });
+  }
+
+  async embedQuery(text: string): Promise<number[]> {
+    const response = await this.ai.models.embedContent({
+      model: "gemini-embedding-001",
+      contents: text,
+    });
+
+    if (!response.embeddings || response.embeddings.length === 0) {
+      throw new Error("No embeddings returned from the API");
+    }
+
+    return (response as any).embeddings[0].values;
+  }
+
+  async embedDocuments(texts: string[]): Promise<number[][]> {
+    const response = await this.ai.models.embedContent({
+      model: "gemini-embedding-001",
+      contents: texts,
+    });
+
+    if (!response.embeddings || response.embeddings.length === 0) {
+      throw new Error("No embeddings returned from the API");
+    }
+
+    return response.embeddings.map((e: any) => e.values);
+  }
+}
+
+/* =========================================================
+   Interfaces
+========================================================= */
 
 export interface RAGQuery {
   query: string;
@@ -29,9 +71,13 @@ export interface RAGResponse {
   metadata?: any;
 }
 
+/* =========================================================
+   RAG Service
+========================================================= */
+
 export class RAGService {
-  private genAI: GoogleGenerativeAI;
-  private embeddings: GoogleGenerativeAIEmbeddings;
+  private genAI: GoogleGenAI;
+  private embeddings: GeminiEmbeddings;
   private vectorStore: MongoDBAtlasVectorSearch | null = null;
 
   constructor() {
@@ -39,12 +85,13 @@ export class RAGService {
       throw new ApiError(500, 'GEMINI_API_KEY is not configured');
     }
 
-    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-    this.embeddings = new GoogleGenerativeAIEmbeddings({
-      model: "text-embedding-004",
+    this.genAI = new GoogleGenAI({
       apiKey: process.env.GEMINI_API_KEY,
     });
+
+    this.embeddings = new GeminiEmbeddings(
+      process.env.GEMINI_API_KEY
+    );
   }
 
   /**
@@ -54,12 +101,15 @@ export class RAGService {
     try {
       const collection = mongoose.connection.db!.collection("vector_store");
 
-      this.vectorStore = new MongoDBAtlasVectorSearch(this.embeddings, {
-        collection,
-        indexName: "default",
-        textKey: "text",
-        embeddingKey: "embedding",
-      });
+      this.vectorStore = new MongoDBAtlasVectorSearch(
+        this.embeddings as any,
+        {
+          collection,
+          indexName: "default",
+          textKey: "text",
+          embeddingKey: "embedding",
+        }
+      );
 
       logger.info("✅ RAG Vector Store initialized");
     } catch (error) {
@@ -80,212 +130,230 @@ export class RAGService {
       // Index users
       const users = await User.find({ isActive: true }).select('username email roles createdAt lastActiveAt');
       for (const user of users) {
-        const text = `User: ${user.username}, Email: ${user.email}, Roles: ${user.roles.join(', ')}, Created: ${user.createdAt}, Last Active: ${user.lastActiveAt}`;
-        await this.vectorStore!.addDocuments([{
-          pageContent: text,
-          metadata: { type: 'user', id: user._id, username: user.username }
-        }]);
+        const text = `User: ${user.username}, Email: ${user.email}, Roles: ${user.roles.join(
+          ", "
+        )}, Created: ${user.createdAt}, Last Active: ${user.lastActiveAt}`;
+
+        await this.vectorStore!.addDocuments([
+          {
+            pageContent: text,
+            metadata: {
+              type: "user",
+              id: user._id,
+              username: user.username,
+            },
+          },
+        ]);
       }
 
       // Index channels
       const channels = await Channel.find({ isArchived: false });
       for (const channel of channels) {
-        const text = `Channel: ${channel.name}, Description: ${channel.description || 'No description'}, Owner: ${channel.owner}, Members: ${channel.members.length}, Public: ${channel.isPublic}`;
-        await this.vectorStore!.addDocuments([{
-          pageContent: text,
-          metadata: { type: 'channel', id: channel._id, name: channel.name }
-        }]);
+        const text = `Channel: ${channel.name}, Description: ${
+          channel.description || "No description"
+        }, Owner: ${channel.owner}, Members: ${
+          channel.members.length
+        }, Public: ${channel.isPublic}`;
+
+        await this.vectorStore!.addDocuments([
+          {
+            pageContent: text,
+            metadata: {
+              type: "channel",
+              id: channel._id,
+              name: channel.name,
+            },
+          },
+        ]);
       }
 
-      // Index questions (quizzes)
+      /* -------- Questions -------- */
       const questions = await Question.find({});
+
       for (const question of questions) {
-        const text = `Question: ${question.questionText}, Channel: ${question.channelId}, Created by: ${question.createdBy}, Marks: ${question.marks}`;
-        await this.vectorStore!.addDocuments([{
-          pageContent: text,
-          metadata: { type: 'question', id: question._id, channelId: question.channelId }
-        }]);
+        const text = `Question: ${question.questionText}, Channel: ${
+          question.channelId
+        }, Created by: ${question.createdBy}, Marks: ${question.marks}`;
+
+        await this.vectorStore!.addDocuments([
+          {
+            pageContent: text,
+            metadata: {
+              type: "question",
+              id: question._id,
+              channelId: question.channelId,
+            },
+          },
+        ]);
       }
 
-      // Index attempts
+      /* -------- Attempts -------- */
       const attempts = await Attempt.find({});
+
       for (const attempt of attempts) {
-        const text = `Attempt: User ${attempt.userId}, Channel ${attempt.channelId}, Score: ${attempt.score}%, Percentage: ${attempt.percentage}%, Submitted: ${attempt.submittedAt || attempt.startedAt}`;
-        await this.vectorStore!.addDocuments([{
-          pageContent: text,
-          metadata: { type: 'attempt', id: attempt._id, userId: attempt.userId, channelId: attempt.channelId }
-        }]);
+        const text = `Attempt: User ${attempt.userId}, Channel ${
+          attempt.channelId
+        }, Score: ${attempt.score}%, Percentage: ${
+          attempt.percentage
+        }%, Submitted: ${
+          attempt.submittedAt || attempt.startedAt
+        }`;
+
+        await this.vectorStore!.addDocuments([
+          {
+            pageContent: text,
+            metadata: {
+              type: "attempt",
+              id: attempt._id,
+              userId: attempt.userId,
+              channelId: attempt.channelId,
+            },
+          },
+        ]);
       }
 
       logger.info("✅ Database content indexed for RAG");
     } catch (error) {
       logger.error(`❌ Failed to index database content: ${error}`);
-      throw new ApiError(500, 'Failed to index database content');
+      throw new ApiError(500, "Failed to index database content");
     }
   }
 
-  /**
-   * Query the RAG system
-   */
+  /* =========================================================
+     Query RAG
+  ========================================================= */
+
   async query(params: RAGQuery): Promise<RAGResponse> {
     try {
       const { query } = params;
 
-      // Validate query is a question
-      if (!query.trim().endsWith('?')) {
-        logger.error(`❌ QUERY :: ${query} must end with ?`);
-        throw new ApiError(400, 'Query must be a question ending with "?"');
+      if (!query.trim().endsWith("?")) {
+        throw new ApiError(
+          400,
+          'Query must be a question ending with "?"'
+        );
       }
 
-      // Generate embedding for the query text
       const queryEmbedding = await this.embeddings.embedQuery(query);
-      logger.info(`✅ Generated for ${query} embedding with ${queryEmbedding.length} dimensions`);
 
-      // MongoDB aggregation pipeline for vector search
       const pipeline = [
         {
           $vectorSearch: {
-            index: "default", // Your vector search index name
-            path: "embedding", // The field containing the vector
-            queryVector: queryEmbedding, // The 768-dimensional query vector
-            numCandidates: 10, // Number of candidates to consider
-            limit: 3, // Number of results to return
-          }
+            index: "default",
+            path: "embedding",
+            queryVector: queryEmbedding,
+            numCandidates: 10,
+            limit: 3,
+          },
         },
         {
           $project: {
             _id: 1,
             text: 1,
-            type: 1,
-            id: 1,
-            channelId: 1,
-            score: { $meta: "vectorSearchScore" } // Include similarity score
-          }
-        }
+            metadata: 1,
+            score: { $meta: "vectorSearchScore" },
+          },
+        },
       ];
 
-      // Execute the aggregation
-      const collection = mongoose.connection.db!.collection("vector_store");
-      const searchResults = await collection.aggregate(pipeline).toArray();
+      const collection =
+        mongoose.connection.db!.collection("vector_store");
 
-      logger.info(`✅Found ${searchResults.length} similar documents`);
+      const searchResults = await collection
+        .aggregate(pipeline)
+        .toArray();
 
-      // Generate natural language answer using LLM
-      const answer = await this.generateAnswerWithLLM(query, searchResults);
+      const answer = await this.generateAnswerWithLLM(
+        query,
+        searchResults
+      );
 
       return {
         answer,
         sources: searchResults,
-        metadata: {
-          query,
-        }
+        metadata: { query },
       };
-
-    } catch (error) {
+    } catch (error: any) {
       logger.error(`❌ RAG Query Error: ${error}`);
-      throw new ApiError(500, `Failed to process query: ${error}`);
+      throw new ApiError(
+        500,
+        `Failed to process query: ${error.message}`
+      );
     }
   }
 
+  /* =========================================================
+     LLM Answer Generation (NEW SDK)
+  ========================================================= */
 
-  /**
-   * Generate a natural language answer using LLM
-   */
-  private async generateAnswerWithLLM(query: string, searchResults: any[]): Promise<string> {
+  private async generateAnswerWithLLM(
+    query: string,
+    searchResults: any[]
+  ): Promise<string> {
     try {
-      const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-      // Prepare context from search results
-      const context = searchResults.map(doc => `[${doc.type}] ${doc.text}`).join('\n\n');
+      const context = searchResults
+        .map((doc) => `[${doc.metadata?.type}] ${doc.text}`)
+        .join("\n\n");
 
       const prompt = `
-Based on the following retrieved information, please provide a clear and concise answer to the user's query: "${query}"
+Based on the following retrieved information, answer the user's query.
+
+User Query:
+"${query}"
 
 Retrieved Information:
 ${context}
 
-Please answer the query directly and naturally, as if you are responding to the user. If the information doesn't fully answer the query, say so politely.
+If the information is insufficient, politely say so.
 `;
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      return response.text();
-    } catch (error) {
-      logger.error('❌ LLM generation error:', error);
-      return `Sorry, I couldn't generate an answer due to an error: ${error.message}`;
+      const result = await this.genAI.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+
+      return (result as any).text;
+    } catch (error: any) {
+      logger.error("❌ LLM generation error:", error);
+      return `Sorry, I couldn't generate an answer: ${error.message}`;
     }
   }
 
-  /**
-   * Generate diagram data based on query
-   */
+  /* =========================================================
+     Diagram Generation
+  ========================================================= */
+
   async generateDiagram(query: string): Promise<any> {
     try {
-      const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
-
-      // Use AI to understand what diagram to generate
       const diagramPrompt = `
 Based on this query: "${query}"
 
-Generate diagram data in JSON format. The diagram should visualize data from our quiz application.
-Possible diagram types: bar chart, pie chart, line chart, etc.
+Generate diagram data in JSON format.
 
-Return JSON with:
+Return:
 {
-  "type": "bar|pie|line",
+  "type": "bar|pie|line|none",
   "title": "Diagram Title",
-  "data": [...],
-  "labels": [...],
-  "description": "..."
+  "data": [],
+  "labels": [],
+  "description": ""
 }
-
-If no diagram makes sense, return {"type": "none"}
 `;
 
-      const result = await model.generateContent(diagramPrompt);
-      const response = await result.response;
-      const text = response.text();
+      const result = await this.genAI.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: diagramPrompt,
+      });
 
       try {
-        return JSON.parse(text);
+        return JSON.parse((result as any).text);
       } catch {
         return { type: "none" };
       }
-
     } catch (error) {
       logger.error(`❌ Diagram generation error: ${error}`);
       return { type: "none" };
     }
-  }
-
-  /**
-   * Parse natural language query to extract filters
-   */
-  parseQuery(query: string): Partial<RAGFilters> {
-    const filters: Partial<RAGFilters> = {};
-
-    // Extract username mentions
-    const usernameMatch = query.match(/user(?:name)?\s+["']?(\w+)["']?/i);
-    if (usernameMatch) {
-      filters.username = usernameMatch[1];
-    }
-
-    // Extract topic mentions
-    const topicMatch = query.match(/topic\s+["']?([^"']+)["']?/i);
-    if (topicMatch) {
-      filters.topic = topicMatch[1];
-    }
-
-    // Extract date ranges (basic implementation)
-    const dateMatch = query.match(/from\s+(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/i);
-    if (dateMatch) {
-      filters.dateRange = {
-        start: new Date(dateMatch[1]),
-        end: new Date(dateMatch[2]),
-      };
-    }
-
-    return filters;
   }
 }
 
