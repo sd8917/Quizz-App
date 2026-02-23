@@ -5,7 +5,7 @@ import { ApiError } from "../utils/apiError";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // Use the correct model name for v1 API
-const MODEL_NAME = "gemini-1.0-pro";
+const MODEL_NAME = "gemini-2.5-pro";
 
 export interface AIGeneratedQuestion {
   questionText: string;
