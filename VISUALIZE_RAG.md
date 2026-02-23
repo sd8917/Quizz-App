@@ -11,7 +11,19 @@ The Visuiliaze Quiz App implements a sophisticated Retrieval-Augmented Generatio
 ### Components
 
 1. **Vector Store**: MongoDB Atlas Vector Search for semantic similarity search
-2. **Embeddings**: Google Generative AI (text-embedding-004) for text vectorization
+2. **Embeddings**: Google Generative AI (text-embedding-004) for text vectorization (Deperacted);
+
+`
+const ai = new GoogleGenAI({apiKey: ""});
+
+    const response = await ai.models.embedContent({
+        model: 'gemini-embedding-001',
+        contents: 'What is the meaning of life?',
+    });
+
+    https://ai.google.dev/gemini-api/docs/changelog#01-14-2026
+`
+
 3. **LLM**: Google Gemini 2.5 Flash for natural language generation
 4. **Data Sources**: Users, Channels, Questions (Quizzes), Attempts
 
