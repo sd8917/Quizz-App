@@ -149,11 +149,9 @@ export class RAGService {
       // Index channels
       const channels = await Channel.find({ isArchived: false });
       for (const channel of channels) {
-        const text = `Channel: ${channel.name}, Description: ${
-          channel.description || "No description"
-        }, Owner: ${channel.owner}, Members: ${
-          channel.members.length
-        }, Public: ${channel.isPublic}`;
+        const text = `Channel: ${channel.name}, Description: ${channel.description || "No description"
+          }, Owner: ${channel.owner}, Members: ${channel.members.length
+          }, Public: ${channel.isPublic}`;
 
         await this.vectorStore!.addDocuments([
           {
@@ -171,9 +169,8 @@ export class RAGService {
       const questions = await Question.find({});
 
       for (const question of questions) {
-        const text = `Question: ${question.questionText}, Channel: ${
-          question.channelId
-        }, Created by: ${question.createdBy}, Marks: ${question.marks}`;
+        const text = `Question: ${question.questionText}, Channel: ${question.channelId
+          }, Created by: ${question.createdBy}, Marks: ${question.marks}`;
 
         await this.vectorStore!.addDocuments([
           {
@@ -191,13 +188,10 @@ export class RAGService {
       const attempts = await Attempt.find({});
 
       for (const attempt of attempts) {
-        const text = `Attempt: User ${attempt.userId}, Channel ${
-          attempt.channelId
-        }, Score: ${attempt.score}%, Percentage: ${
-          attempt.percentage
-        }%, Submitted: ${
-          attempt.submittedAt || attempt.startedAt
-        }`;
+        const text = `Attempt: User ${attempt.userId}, Channel ${attempt.channelId
+          }, Score: ${attempt.score}%, Percentage: ${attempt.percentage
+          }%, Submitted: ${attempt.submittedAt || attempt.startedAt
+          }`;
 
         await this.vectorStore!.addDocuments([
           {
@@ -311,6 +305,8 @@ If the information is insufficient, politely say so.
         model: "gemini-2.5-flash",
         contents: prompt,
       });
+
+      console.log("RESULT ", result);
 
       return (result as any).text;
     } catch (error: any) {
