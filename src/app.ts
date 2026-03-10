@@ -24,6 +24,8 @@ import { feedbackRoutes } from './routes/v1/feedback.routes';
 import { LogUploadService } from './services/logUpload.service';
 import * as cron from 'node-cron';
 import { ragRoutes } from './routes/v1/rag.routes';
+import autoRecoveryRoutes from './routes/v1/autoRecovery.routes';
+import { startAutoRecoveryWorker } from './workers/autoRecoveryWorker';
 
 const app = express();
 
@@ -208,6 +210,9 @@ app.use('/api/feedback', feedbackRoutes);
 // rag routes
 app.use('/api/rag', ragRoutes)
 
+// Auto-recovery routes (for AI error recovery)
+app.use('/api/auto-recovery', autoRecoveryRoutes);
+
 // Schedule log upload to S3 every 3 days at midnight
 cron.schedule('0 0 */3 * *', async () => {
   logger.info('[✅app.ts] Scheduled log upload to S3 starting...');
@@ -218,6 +223,16 @@ cron.schedule('0 0 */3 * *', async () => {
     logger.error('❌ Scheduled log upload failed:', error);
   }
 });
+
+// Start auto-recovery worker - runs every minute to check for errors
+// Only start in production or if explicitly enabled
+if (process.env.AUTO_RECOVERY_ENABLED === 'true') {
+  console.log("[✅app.ts] Starting auto-recovery worker...");
+  logger.info('[✅app.ts] Starting auto-recovery worker...');
+  startAutoRecoveryWorker(60000); // Run every minute (60000ms)
+} else {
+  logger.info('[✅app.ts] Auto-recovery worker disabled. Set NODE_ENV=production or AUTO_RECOVERY_ENABLED=true to enable.');
+}
 
 // Error handling middleware (centralized)
 app.use(errorHandler);

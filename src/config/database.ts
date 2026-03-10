@@ -6,8 +6,12 @@ export const connectDB = async (): Promise<void> => {
     try {
         const connectionString = process.env.MONGODB_URI || 'mongodb://localhost:27017/blog-app';
         const conn = await mongoose.connect(connectionString, {
-            // serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+            serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
             socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+            maxPoolSize: 10, // Maximum number of connections in the pool
+            minPoolSize: 2, // Minimum number of connections in the pool
+            retryWrites: true, // Retry failed writes
+            retryReads: true, // Retry failed reads
             readPreference: 'secondaryPreferred'
         });
 
@@ -24,6 +28,15 @@ export const connectDB = async (): Promise<void> => {
 
         mongoose.connection.on('disconnected', () => {
             logger.error('❌ Mongoose connection disconnected');
+        });
+
+        mongoose.connection.on('reconnected', () => {
+            logger.info('✅ Mongoose reconnected to DB');
+        });
+
+        // Handle connection close events
+        mongoose.connection.on('close', () => {
+            logger.info('✅ Mongoose connection closed');
         });
 
         // Handle process termination
