@@ -51,7 +51,7 @@ router.post('/trigger', async (req, res) => {
  *       500:
  *         description: Error in auto-recovery process
  */
-router.post('/auto-apply', async (req, res) => {
+router.post('/auto-apply', async (_req, res) => {
   try {
     const result = await performAutoRecovery(true);
     res.json(result);
@@ -72,7 +72,7 @@ router.post('/auto-apply', async (req, res) => {
  *       200:
  *         description: List of pending requests
  */
-router.get('/pending', async (req, res) => {
+router.get('/pending', async (_req, res) => {
   try {
     const pendingRequests = getAllPendingRequests();
     res.json({ success: true, data: pendingRequests });
@@ -188,7 +188,7 @@ router.get('/status/:id', (req, res) => {
  *       500:
  *         description: Error in analysis process
  */
-router.get('/analyze', async (req, res) => {
+router.get('/analyze', async (_req, res) => {
   try {
     const result = await analyzeErrorsAndGetSuggestions();
     res.json(result);
@@ -211,7 +211,7 @@ router.get('/analyze', async (req, res) => {
  *       500:
  *         description: Error in sending daily summary
  */
-router.get('/daily-summary', async (req, res) => {
+router.get('/daily-summary', async (_req, res) => {
   try {
     await sendDailyErrorSummary();
     res.json({ success: true, message: 'Daily error summary sent' });
