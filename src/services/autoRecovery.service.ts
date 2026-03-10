@@ -213,30 +213,6 @@ async function sendDailyErrorSummaryEmail(errors: any[]): Promise<void> {
   if (errors.length === 0) return;
   
   const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:3000';
-  const errorListHtml = errors.map((err, index) => `
-    <li style="margin-bottom: 15px; padding: 10px; background: #f5f5f5; border-radius: 4px;">
-      <strong>${index + 1}. ${err.errorType}</strong><br/>
-      <small>${new Date(err.detectedAt).toLocaleString()}</small><br/>
-      <span>${err.errorMessage.substring(0, 150)}...</span><br/>
-      <em>Suggested Fix: ${err.proposedFix?.description || 'None'}</em>
-    </li>
-  `).join('');
-
-  const html = `
-    <h2>Daily Error Detection Report</h2>
-    <p>A total of <strong>${errors.length}</strong> error(s) were detected in your Quizz-App.</p>
-    
-    <h3>Error Details:</h3>
-    <ul style="list-style: none; padding: 0;">
-      ${errorListHtml}
-    </ul>
-    
-    <p style="margin-top: 20px;">
-      <a href="${websiteUrl}/admin/errors" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">View All Errors</a>
-    </p>
-    
-    <p><small>This is an automated daily report from the Auto-Recovery System.</small></p>
-  `;
 
   try {
     await sendSupportEmail(
@@ -518,65 +494,12 @@ function applyFix(filePath: string, newModelName: string): boolean {
 }
 
 /**
- * Apply the fix to .env file
- */
-function applyEnvFix(newValue: string, key: string): boolean {
-  try {
-    const envPath = path.join(process.cwd(), '.env');
-    if (!fs.existsSync(envPath)) {
-      logger.error(`[AutoRecovery] .env file not found`);
-      return false;
-    }
-
-    let content = fs.readFileSync(envPath, 'utf-8');
-    const regex = new RegExp(`^${key}=.*$`, 'm');
-    
-    if (content.match(regex)) {
-      content = content.replace(regex, `${key}=${newValue}`);
-    } else {
-      content += `\n${key}=${newValue}`;
-    }
-
-    fs.writeFileSync(envPath, content, 'utf-8');
-    logger.info(`[AutoRecovery] Successfully updated ${key} in .env`);
-    return true;
-  } catch (error) {
-    logger.error('[AutoRecovery] Failed to apply .env fix:', error);
-    return false;
-  }
-}
-
-/**
  * Send approval request email to admin
  */
 async function sendApprovalRequestEmail(request: ApprovalRequest): Promise<void> {
   const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:3000';
   const approvalUrl = `${websiteUrl}/api/v1/auto-recovery/approve/${request.id}`;
   const rejectUrl = `${websiteUrl}/api/v1/auto-recovery/reject/${request.id}`;
-  const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
-
-  const html = `
-    <h2>Auto-Recovery Approval Request</h2>
-    <p>An error was detected in the AI service that requires your approval to fix.</p>
-    
-    <h3>Error Type:</h3>
-    <p><strong>${request.errorType}</strong></p>
-    
-    <h3>Error Details:</h3>
-    <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto;">${request.errorDetected}</pre>
-    
-    <h3>Proposed Fix:</h3>
-    <p>${request.proposedFix.description}</p>
-    <p><strong>Confidence:</strong> ${request.proposedFix.confidence}</p>
-    <p><strong>Affected Files:</strong> ${request.proposedFix.affectedFiles.join(', ') || 'None'}</p>
-    
-    <div style="margin: 20px 0;">
-      <a href="${approvalUrl}" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;">Approve</a>
-      <a href="${rejectUrl}" style="background: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Reject</a>
-    </div>
-    
-    <p><small>This request will expire in 24 hours.</small></p>
-  `;
 
   try {
     await sendSupportEmail(
@@ -890,7 +813,7 @@ export async function analyzeErrorsAndGetSuggestions(): Promise<{
 }> {
   logger.info('[AutoRecovery] Analyzing errors and generating suggestions...');
   
-  const { lines, parsedErrors } = parseErrorLog();
+  const { parsedErrors } = parseErrorLog();
   
   if (parsedErrors.length === 0) {
     return {
@@ -952,7 +875,6 @@ export async function analyzeErrorsAndGetSuggestions(): Promise<{
       }
     } else if (message.includes('[AutoRecovery]')) {
       autoRecoveryErrors++;
-      const errorType = classifyError(message, error.stack);
       const modelName = extractModelFromError(message);
       
       suggestion = `The recovery model "${modelName || RECOVERY_MODEL}" is failing. Update RECOVERY_MODEL to "${RECOVERY_MODEL}" in autoRecovery.service.ts`;
