@@ -11,16 +11,17 @@ const router = Router();
  *     tags: [Auto Recovery]
  *     summary: Trigger auto-recovery check
  *     description: Reads error logs and creates an approval request if AI error is detected
- *     parameters:
- *       - in: body
- *         name: body
- *         schema:
- *           type: object
- *           properties:
- *             autoApply:
- *               type: boolean
- *               description: If true, automatically apply high-confidence fixes without approval
- *               default: false
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               autoApply:
+ *                 type: boolean
+ *                 description: If true, automatically apply high-confidence fixes without approval
+ *                 default: false
  *     responses:
  *       200:
  *         description: Auto-recovery check completed
