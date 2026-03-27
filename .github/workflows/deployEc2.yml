@@ -44,7 +44,7 @@ jobs:
           SOURCE: deploy-package/
           EXCLUDE: /node_modules/, /.git/, /.github/, /src/
           SCRIPT_BEFORE: |
-            pm2 stop Quiz-App || true
+            pm2 stop Quiz-app || true
             rm -rf /home/ubuntu/Quizz-App/dist /home/ubuntu/Quizz-App/node_modules
             mkdir -p /home/ubuntu/Quizz-App/logs
           SCRIPT_AFTER: |
@@ -56,9 +56,48 @@ jobs:
             echo "=== Installing dependencies ==="
             npm ci --production
             echo "=== Starting application ==="
-            pm2 delete Quiz-App || true
-            pm2 start dist/index.js --name="Quiz-App" --node-args="--max-old-space-size=4096"
+            pm2 delete Quiz-app || true
+            pm2 start dist/index.js --name="Quiz-app" --node-args="--max-old-space-size=4096"
             pm2 save
             pm2 list
             sleep 3
-            pm2 logs Quiz-App --lines 20 --nostream || true
+            pm2 logs Quiz-app --lines 20 --nostream || true
+
+      - name: Generate Release Tag
+        id: tag
+        run: |
+          TAG="v$(date +'%Y.%m.%d')-${{ github.run_number }}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Generated tag: $TAG"
+
+      - name: Create Release Notes
+        id: notes
+        run: |
+          cat > release_notes.md << 'EOF'
+          ## 🚀 Deployment Release
+          
+          **Deployed to:** Production EC2
+          **Commit:** ${{ github.sha }}
+          **Branch:** ${{ github.ref_name }}
+          **Triggered by:** ${{ github.actor }}
+          **Build:** #${{ github.run_number }}
+          
+          ### 📝 Recent Changes
+          ${{ github.event.head_commit.message }}
+          
+          ### 🔗 Links
+          - [View Commit](${{ github.event.head_commit.url }})
+          - [View Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          EOF
+          echo "notes_file=release_notes.md" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Release ${{ steps.tag.outputs.tag }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN_SECRET_GITHUB }}
