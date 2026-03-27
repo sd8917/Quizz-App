@@ -44,7 +44,7 @@ jobs:
           SOURCE: deploy-package/
           EXCLUDE: /node_modules/, /.git/, /.github/, /src/
           SCRIPT_BEFORE: |
-            pm2 stop Quiz-App || true
+            pm2 stop Quiz-app || true
             rm -rf /home/ubuntu/Quizz-App/dist /home/ubuntu/Quizz-App/node_modules
             mkdir -p /home/ubuntu/Quizz-App/logs
           SCRIPT_AFTER: |
@@ -56,12 +56,12 @@ jobs:
             echo "=== Installing dependencies ==="
             npm ci --production
             echo "=== Starting application ==="
-            pm2 delete Quiz-App || true
-            pm2 start dist/index.js --name="Quiz-App" --node-args="--max-old-space-size=4096"
+            pm2 delete Quiz-app || true
+            pm2 start dist/index.js --name="Quiz-app" --node-args="--max-old-space-size=4096"
             pm2 save
             pm2 list
             sleep 3
-            pm2 logs Quiz-App --lines 20 --nostream || true
+            pm2 logs Quiz-app --lines 20 --nostream || true
 
       - name: Generate Release Tag
         id: tag
