@@ -1,4 +1,5 @@
 import swaggerJsdoc from 'swagger-jsdoc';
+import path from 'path';
 
 const options: swaggerJsdoc.Options = {
   definition: {
@@ -500,10 +501,12 @@ Authorization: Bearer <your_access_token>
     },
     security: []
   },
-  // Use different paths for development (TypeScript) and production (JavaScript)
-  apis: process.env.NODE_ENV === 'production'
-    ? ['./dist/routes/**/*.js', './dist/controllers/**/*.js', './dist/app.js']
-    : ['./src/routes/**/*.ts', './src/controllers/**/*.ts', './src/app.ts']
+  // Use absolute paths to resolve correctly regardless of cwd
+  apis: [
+    path.join(__dirname, '../routes/**/*.{ts,js}').replace(/\\/g, '/'),
+    path.join(__dirname, '../controllers/**/*.{ts,js}').replace(/\\/g, '/'),
+    path.join(__dirname, '../app.{ts,js}').replace(/\\/g, '/')
+  ]
 };
 
 const swaggerSpec = swaggerJsdoc(options);

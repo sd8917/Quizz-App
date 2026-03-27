@@ -1,0 +1,3084 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "TriviaVerse API Documentation",
+    "version": "1.0.0",
+    "description": "\n## Quiz Collaboration Platform API\n\nA comprehensive RESTful API for a quiz collaboration platform that enables teams to create channels, \nmanage quizzes, invite members, and track leaderboards.\n\n### Features\n- 🔐 JWT-based authentication with refresh tokens\n- 👥 Role-based access control (User, Creator, Admin)\n- 📊 Quiz and question management\n- 🏆 Leaderboard and scoring system\n- 📝 Channel-based collaboration\n- 📋 Server logs and monitoring (Admin only)\n- ⚡ Rate limiting and security\n- 🎯 Standardized response format\n\n### Authentication\nMost endpoints require a Bearer token in the Authorization header:\n```\nAuthorization: Bearer <your_access_token>\n```\n\n### Roles\n- **user**: Can take quizzes and view scores\n- **creator**: Can create channels, quizzes, and invite users\n- **admin**: Full system access including logs and user management\n\n### Rate Limits\n- Auth endpoints: 5 requests per 15 minutes\n- Token refresh: 20 requests per 15 minutes\n- General API: 100 requests per 15 minutes\n- Role management: 10 requests per hour\n      ",
+    "contact": {
+      "name": "API Support",
+      "email": "support@quizapp.com"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Development server"
+    },
+    {
+      "url": "https://api.triviaverse.site",
+      "description": "Production server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User authentication and authorization endpoints"
+    },
+    {
+      "name": "Profile",
+      "description": "User profile management"
+    },
+    {
+      "name": "Channels",
+      "description": "Channel management and invitations"
+    },
+    {
+      "name": "Quizzes",
+      "description": "Quiz creation and management"
+    },
+    {
+      "name": "Attempts",
+      "description": "Quiz attempts and submissions"
+    },
+    {
+      "name": "Logs",
+      "description": "Server logs and monitoring (Admin only)"
+    },
+    {
+      "name": "Health",
+      "description": "System health and status checks"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter your JWT token"
+      },
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "API key for documentation access (required to view this page)"
+      }
+    },
+    "schemas": {
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Indicates if the request was successful"
+          },
+          "statusCode": {
+            "type": "integer",
+            "description": "HTTP status code"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable message"
+          },
+          "data": {
+            "type": "object",
+            "description": "Response data (varies by endpoint)"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "statusCode": {
+            "type": "integer",
+            "example": 400
+          },
+          "message": {
+            "type": "string",
+            "example": "Validation failed"
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "example": "VALIDATION_ERROR"
+              },
+              "details": {
+                "type": "object"
+              }
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "path": {
+            "type": "string",
+            "example": "/api/login"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "64abc123def456789"
+          },
+          "username": {
+            "type": "string",
+            "example": "johndoe"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "john@example.com"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "creator",
+              "admin"
+            ],
+            "example": "user"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "accessToken": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "refreshToken": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        }
+      },
+      "Channel": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "example": "JavaScript Quiz Channel"
+          },
+          "description": {
+            "type": "string",
+            "example": "Channel for JavaScript quizzes"
+          },
+          "createdBy": {
+            "type": "string",
+            "example": "64abc123def456789"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Quiz": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "example": "JavaScript Basics Quiz"
+          },
+          "description": {
+            "type": "string",
+            "example": "Test your JavaScript fundamentals"
+          },
+          "channelId": {
+            "type": "string"
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "question": {
+                  "type": "string"
+                },
+                "options": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "correctAnswer": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "LogEntry": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-11-18T10:30:45.123Z"
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "error",
+              "warn",
+              "info",
+              "debug"
+            ],
+            "example": "error"
+          },
+          "message": {
+            "type": "string",
+            "example": "Database connection failed"
+          },
+          "service": {
+            "type": "string",
+            "example": "blog-api"
+          },
+          "stack": {
+            "type": "string",
+            "description": "Error stack trace (for errors only)"
+          }
+        }
+      },
+      "HealthCheck": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok",
+            "description": "Overall service status"
+          },
+          "uptime": {
+            "type": "string",
+            "example": "2h 15m 30s",
+            "description": "Human-readable uptime"
+          },
+          "uptimeSeconds": {
+            "type": "number",
+            "example": 8130.5,
+            "description": "Uptime in seconds"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-11-27T10:30:45.123Z",
+            "description": "Current server time in ISO format"
+          },
+          "env": {
+            "type": "string",
+            "example": "development",
+            "description": "Environment (development, production, etc.)"
+          },
+          "memory": {
+            "type": "object",
+            "description": "Memory usage information",
+            "properties": {
+              "rss": {
+                "type": "string",
+                "example": "45.23 MB",
+                "description": "Resident Set Size - total memory allocated"
+              },
+              "heapTotal": {
+                "type": "string",
+                "example": "20.15 MB",
+                "description": "Total heap allocated"
+              },
+              "heapUsed": {
+                "type": "string",
+                "example": "15.42 MB",
+                "description": "Heap memory currently in use"
+              },
+              "external": {
+                "type": "string",
+                "example": "2.10 MB",
+                "description": "Memory used by C++ objects bound to JS"
+              },
+              "arrayBuffers": {
+                "type": "string",
+                "example": "1.05 MB",
+                "description": "Memory allocated for ArrayBuffers and SharedArrayBuffers"
+              },
+              "raw": {
+                "type": "object",
+                "description": "Raw memory values in bytes",
+                "properties": {
+                  "rss": {
+                    "type": "number",
+                    "example": 47448064
+                  },
+                  "heapTotal": {
+                    "type": "number",
+                    "example": 21135360
+                  },
+                  "heapUsed": {
+                    "type": "number",
+                    "example": 16168456
+                  },
+                  "external": {
+                    "type": "number",
+                    "example": 2202976
+                  }
+                }
+              }
+            }
+          },
+          "database": {
+            "type": "object",
+            "description": "Database connection status",
+            "properties": {
+              "state": {
+                "type": "string",
+                "example": "connected",
+                "enum": [
+                  "disconnected",
+                  "connected",
+                  "connecting",
+                  "disconnecting",
+                  "unknown"
+                ]
+              },
+              "readyState": {
+                "type": "number",
+                "example": 1,
+                "description": "0=disconnected, 1=connected, 2=connecting, 3=disconnecting"
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "UnauthorizedError": {
+        "description": "Authentication required or token invalid",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "statusCode": 401,
+              "message": "Not authorized, no token",
+              "error": {
+                "code": "UNAUTHORIZED"
+              },
+              "timestamp": "2025-11-18T10:30:45.123Z"
+            }
+          }
+        }
+      },
+      "ForbiddenError": {
+        "description": "Insufficient permissions",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "statusCode": 403,
+              "message": "Forbidden: insufficient role",
+              "error": {
+                "code": "FORBIDDEN"
+              },
+              "timestamp": "2025-11-18T10:30:45.123Z"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Validation failed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "statusCode": 422,
+              "message": "Validation failed",
+              "error": {
+                "code": "VALIDATION_ERROR",
+                "details": {
+                  "email": "Email is required",
+                  "password": "Password must be at least 8 characters"
+                }
+              },
+              "timestamp": "2025-11-18T10:30:45.123Z",
+              "path": "/api/register"
+            }
+          }
+        }
+      },
+      "NotFoundError": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "statusCode": 404,
+              "message": "Resource not found",
+              "error": {
+                "code": "NOT_FOUND"
+              },
+              "timestamp": "2025-11-18T10:30:45.123Z"
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [],
+  "paths": {
+    "/api/ai/generate-questions": {
+      "post": {
+        "tags": [
+          "AI Questions"
+        ],
+        "summary": "Generate questions using AI (Premium creators only)",
+        "description": "Generate multiple-choice questions using Google's Gemini AI. Only available to users with creator role.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "topic",
+                  "difficulty",
+                  "numberOfQuestions"
+                ],
+                "properties": {
+                  "topic": {
+                    "type": "string",
+                    "description": "The topic for question generation",
+                    "example": "JavaScript Event Loop"
+                  },
+                  "difficulty": {
+                    "type": "string",
+                    "enum": [
+                      "easy",
+                      "medium",
+                      "hard"
+                    ],
+                    "description": "Difficulty level of questions",
+                    "example": "medium"
+                  },
+                  "numberOfQuestions": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20,
+                    "description": "Number of questions to generate",
+                    "example": 5
+                  },
+                  "marks": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Marks per question (optional, default is 1)",
+                    "example": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Questions generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Questions generated successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "questions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "questionText": {
+                                "type": "string"
+                              },
+                              "marks": {
+                                "type": "integer"
+                              },
+                              "options": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "text": {
+                                      "type": "string"
+                                    },
+                                    "isCorrect": {
+                                      "type": "boolean"
+                                    }
+                                  }
+                                }
+                              },
+                              "explanation": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "metadata": {
+                          "type": "object",
+                          "properties": {
+                            "topic": {
+                              "type": "string"
+                            },
+                            "difficulty": {
+                              "type": "string"
+                            },
+                            "totalQuestions": {
+                              "type": "integer"
+                            },
+                            "totalMarks": {
+                              "type": "integer"
+                            },
+                            "generatedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "generatedBy": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid input or not a premium creator"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "403": {
+            "description": "Forbidden - Only creators can access this feature"
+          },
+          "500": {
+            "description": "Server error - AI generation failed"
+          }
+        }
+      }
+    },
+    "/api/ai/validate-topic": {
+      "post": {
+        "tags": [
+          "AI Questions"
+        ],
+        "summary": "Validate if a topic is appropriate for quiz generation",
+        "description": "Check if a given topic is suitable for educational quiz question generation",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "topic"
+                ],
+                "properties": {
+                  "topic": {
+                    "type": "string",
+                    "description": "Topic to validate",
+                    "example": "Python Programming"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Topic validation completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "topic": {
+                          "type": "string"
+                        },
+                        "isValid": {
+                          "type": "boolean"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/attempt/channel/{channelId}/submit": {
+      "post": {
+        "tags": [
+          "Attempts"
+        ],
+        "summary": "Submit a quiz attempt",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "score": {
+                    "type": "integer"
+                  },
+                  "timeTaken": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Attempt submitted successfully"
+          }
+        }
+      }
+    },
+    "/api/attempt/user": {
+      "get": {
+        "tags": [
+          "Attempts"
+        ],
+        "summary": "Get user attempts",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attempts retrieved successfully"
+          }
+        }
+      }
+    },
+    "/api/attempt/channel/{channelId}/leaderboard": {
+      "get": {
+        "tags": [
+          "Attempts"
+        ],
+        "summary": "Get channel leaderboard",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Leaderboard retrieved successfully"
+          }
+        }
+      }
+    },
+    "/api/attempt/channel/{channelId}/fullscreen-violation": {
+      "post": {
+        "tags": [
+          "Attempts"
+        ],
+        "summary": "Report a fullscreen violation",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Violation reported"
+          }
+        }
+      }
+    },
+    "/api/register": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Register a new user",
+        "description": "Create a new user account with username, email, and password",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "username",
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "example": "johndoe"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "john@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "SecurePass123!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AuthResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "description": "Too many requests (rate limit: 5 per 15 minutes)"
+          }
+        }
+      }
+    },
+    "/api/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Login user",
+        "description": "Authenticate user and receive access and refresh tokens",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "john@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "SecurePass123!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AuthResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          },
+          "429": {
+            "description": "Too many requests (rate limit: 5 per 15 minutes)"
+          }
+        }
+      }
+    },
+    "/api/refresh": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Refresh access token",
+        "description": "Get a new access token using a valid refresh token",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "refreshToken"
+                ],
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token refreshed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "accessToken": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired refresh token"
+          },
+          "429": {
+            "description": "Too many requests (rate limit: 20 per 15 minutes)"
+          }
+        }
+      }
+    },
+    "/api/logout": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Logout user",
+        "description": "Invalidate the current refresh token",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "refreshToken"
+                ],
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logged out successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refresh token is required"
+          }
+        }
+      }
+    },
+    "/api/logout-all": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Logout from all devices",
+        "description": "Invalidate all refresh tokens for the authenticated user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logged out from all devices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/api/forgot-password": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Request password reset",
+        "description": "Send a password reset email to the user. Always returns success to prevent email enumeration.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "john@example.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset email sent (if email exists)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "example": "If your email is registered, you will receive a password reset link shortly."
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Email is required"
+          },
+          "429": {
+            "description": "Too many requests (rate limit: 5 per 15 minutes)"
+          }
+        }
+      }
+    },
+    "/api/reset-password": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Reset password with token",
+        "description": "Reset user password using the token received via email. Token is single-use and expires in 1 hour.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token",
+                  "newPassword"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "example": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "NewSecurePass123!",
+                    "description": "Must be at least 6 characters long"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "example": "Password reset successful. Please login with your new password."
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or weak password"
+          },
+          "401": {
+            "description": "Invalid or expired token"
+          },
+          "429": {
+            "description": "Too many requests"
+          }
+        }
+      }
+    },
+    "/api/verify-reset-token": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Verify password reset token",
+        "description": "Check if a password reset token is valid before showing the reset form",
+        "security": [],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Password reset token from email",
+            "example": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token is valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "email": {
+                              "type": "string",
+                              "example": "john@example.com"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Token is required"
+          },
+          "401": {
+            "description": "Invalid or expired token"
+          }
+        }
+      }
+    },
+    "/api/v1/auto-recovery/trigger": {
+      "post": {
+        "tags": [
+          "Auto Recovery"
+        ],
+        "summary": "Trigger auto-recovery check",
+        "description": "Reads error logs and creates an approval request if AI error is detected",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "autoApply": {
+                    "type": "boolean",
+                    "description": "If true, automatically apply high-confidence fixes without approval",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Auto-recovery check completed"
+          },
+          "500": {
+            "description": "Error in auto-recovery process"
+          }
+        }
+      }
+    },
+    "/api/v1/auto-recovery/auto-apply": {
+      "post": {
+        "tags": [
+          "Auto Recovery"
+        ],
+        "summary": "Trigger auto-recovery with auto-apply enabled",
+        "description": "Automatically applies high-confidence fixes without requiring admin approval",
+        "responses": {
+          "200": {
+            "description": "Auto-recovery with auto-apply completed"
+          },
+          "500": {
+            "description": "Error in auto-recovery process"
+          }
+        }
+      }
+    },
+    "/api/v1/auto-recovery/pending": {
+      "get": {
+        "tags": [
+          "Auto Recovery"
+        ],
+        "summary": "Get all pending approval requests",
+        "description": "Returns all pending auto-recovery approval requests",
+        "responses": {
+          "200": {
+            "description": "List of pending requests"
+          }
+        }
+      }
+    },
+    "/api/v1/auto-recovery/approve/{id}": {
+      "get": {
+        "tags": [
+          "Auto Recovery"
+        ],
+        "summary": "Approve and apply the auto-recovery fix",
+        "description": "Approve an auto-recovery request and apply the fix to the codebase",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "AR-1234567890-abc123"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fix approved and applied"
+          },
+          "404": {
+            "description": "Approval request not found"
+          }
+        }
+      }
+    },
+    "/api/v1/auto-recovery/reject/{id}": {
+      "get": {
+        "tags": [
+          "Auto Recovery"
+        ],
+        "summary": "Reject the auto-recovery fix",
+        "description": "Reject an auto-recovery request without applying any changes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "AR-1234567890-abc123"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fix rejected"
+          },
+          "404": {
+            "description": "Approval request not found"
+          }
+        }
+      }
+    },
+    "/api/v1/auto-recovery/status/{id}": {
+      "get": {
+        "tags": [
+          "Auto Recovery"
+        ],
+        "summary": "Get approval request status",
+        "description": "Check the status of an auto-recovery approval request",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "AR-1234567890-abc123"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status retrieved"
+          },
+          "404": {
+            "description": "Request not found"
+          }
+        }
+      }
+    },
+    "/api/v1/auto-recovery/analyze": {
+      "get": {
+        "tags": [
+          "Auto Recovery"
+        ],
+        "summary": "Analyze errors and get suggestions",
+        "description": "Reads error logs and returns analysis with fix suggestions",
+        "responses": {
+          "200": {
+            "description": "Error analysis with suggestions"
+          },
+          "500": {
+            "description": "Error in analysis process"
+          }
+        }
+      }
+    },
+    "/api/v1/auto-recovery/daily-summary": {
+      "get": {
+        "tags": [
+          "Auto Recovery"
+        ],
+        "summary": "Send daily error summary email",
+        "description": "Fetches today's errors from database and sends summary email to admin",
+        "responses": {
+          "200": {
+            "description": "Daily summary email sent"
+          },
+          "500": {
+            "description": "Error in sending daily summary"
+          }
+        }
+      }
+    },
+    "/api/channel": {
+      "post": {
+        "tags": [
+          "Channels"
+        ],
+        "summary": "Create a new channel",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Channel created successfully"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Channels"
+        ],
+        "summary": "List all accessible channels",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Channels retrieved successfully"
+          }
+        }
+      }
+    },
+    "/api/channel/{channelId}": {
+      "get": {
+        "tags": [
+          "Channels"
+        ],
+        "summary": "Get channel by ID",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Channel retrieved successfully"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Channels"
+        ],
+        "summary": "Update channel details",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "isPublic": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Channel updated successfully"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Channels"
+        ],
+        "summary": "Delete a channel",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Channel deleted successfully"
+          }
+        }
+      }
+    },
+    "/api/channel/{channelId}/invite": {
+      "post": {
+        "tags": [
+          "Channels"
+        ],
+        "summary": "Invite user to channel",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "role": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User invited successfully"
+          }
+        }
+      }
+    },
+    "/api/feedback": {
+      "post": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Submit feedback (anonymous allowed)",
+        "description": "Submit a feedback message with optional name/email, required rating (1-5) and message.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "rating",
+                  "message"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Feedback submitted"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "List feedbacks (admin only)",
+        "description": "Retrieve paginated feedback messages (admin only).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Page number"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Page size"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Feedback list"
+          }
+        }
+      }
+    },
+    "/api/logs/files": {
+      "get": {
+        "tags": [
+          "Logs"
+        ],
+        "summary": "Get list of log files",
+        "description": "Retrieve a list of all available log files with metadata (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Log files retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "files": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string",
+                                    "example": "error.log"
+                                  },
+                                  "path": {
+                                    "type": "string",
+                                    "example": "error"
+                                  },
+                                  "size": {
+                                    "type": "number",
+                                    "example": 245680
+                                  },
+                                  "sizeFormatted": {
+                                    "type": "string",
+                                    "example": "239.92 KB"
+                                  },
+                                  "modifiedAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "error",
+                                      "combined",
+                                      "other"
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      }
+    },
+    "/api/logs": {
+      "get": {
+        "tags": [
+          "Logs"
+        ],
+        "summary": "Get logs with filters",
+        "description": "Retrieve logs with pagination, filtering, and search (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "file",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "combined",
+                "error"
+              ],
+              "default": "combined"
+            },
+            "description": "Log file to read from"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 50
+            },
+            "description": "Number of logs per page"
+          },
+          {
+            "in": "query",
+            "name": "level",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "error",
+                "warn",
+                "info",
+                "debug"
+              ]
+            },
+            "description": "Filter by log level"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search keyword in log messages"
+          },
+          {
+            "in": "query",
+            "name": "startDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Filter from date (ISO 8601)"
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Filter to date (ISO 8601)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "logs": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/LogEntry"
+                              }
+                            },
+                            "total": {
+                              "type": "integer"
+                            },
+                            "page": {
+                              "type": "integer"
+                            },
+                            "pageSize": {
+                              "type": "integer"
+                            },
+                            "totalPages": {
+                              "type": "integer"
+                            },
+                            "file": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/api/logs/errors": {
+      "get": {
+        "tags": [
+          "Logs"
+        ],
+        "summary": "Get recent error logs",
+        "description": "Quick access to the most recent error logs (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 100
+            },
+            "description": "Number of error logs to retrieve"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recent errors retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "errors": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/LogEntry"
+                              }
+                            },
+                            "total": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid limit parameter"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      }
+    },
+    "/api/logs/stats": {
+      "get": {
+        "tags": [
+          "Logs"
+        ],
+        "summary": "Get log statistics",
+        "description": "Get comprehensive statistics about server logs and health (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Log statistics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "totalFiles": {
+                              "type": "integer"
+                            },
+                            "files": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "size": {
+                                    "type": "string"
+                                  },
+                                  "modifiedAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  }
+                                }
+                              }
+                            },
+                            "recentErrors": {
+                              "type": "object",
+                              "properties": {
+                                "total": {
+                                  "type": "integer"
+                                },
+                                "byLevel": {
+                                  "type": "object"
+                                },
+                                "oldestTimestamp": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "newestTimestamp": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            },
+                            "serverUptime": {
+                              "type": "number"
+                            },
+                            "memoryUsage": {
+                              "type": "object"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      }
+    },
+    "/api/logs/{fileName}": {
+      "delete": {
+        "tags": [
+          "Logs"
+        ],
+        "summary": "Clear logs",
+        "description": "Clear all logs from a specific log file (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fileName",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "combined",
+                "error"
+              ]
+            },
+            "description": "Name of the log file to clear"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logs cleared successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid file name"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/api/profile": {
+      "get": {
+        "tags": [
+          "Profile"
+        ],
+        "summary": "Get current user profile",
+        "description": "Retrieve the profile of the authenticated user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Profile"
+        ],
+        "summary": "Update current user profile",
+        "description": "Update the authenticated user's profile information",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "example": "newusername"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "newemail@example.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/api/profile/users": {
+      "get": {
+        "tags": [
+          "Profile"
+        ],
+        "summary": "Get all users (Admin only)",
+        "description": "Retrieve a list of all users in the system. Optionally filter by active status.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "isActive",
+            "schema": {
+              "type": "string",
+              "enum": [
+                true,
+                false
+              ]
+            },
+            "description": "Filter users by active status (\"true\" for active, \"false\" for inactive)",
+            "example": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/User"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameter"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      }
+    },
+    "/api/profile/admin/stats": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Get system statistics (Admin only)",
+        "description": "Retrieve total users, total quizzes, active users today, attempts and completion rate. Admin access only.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Statistics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "totalUsers": {
+                              "type": "integer"
+                            },
+                            "totalQuizzes": {
+                              "type": "integer"
+                            },
+                            "activeToday": {
+                              "type": "integer"
+                            },
+                            "totalAttempts": {
+                              "type": "integer"
+                            },
+                            "submittedAttempts": {
+                              "type": "integer"
+                            },
+                            "completionRate": {
+                              "type": "number"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profile/user/{userId}/roles": {
+      "put": {
+        "tags": [
+          "Profile"
+        ],
+        "summary": "Update user role (Admin only)",
+        "description": "Update a user's role. Requires admin privileges. Rate limited to 10 requests per hour.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "User ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "role"
+                ],
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "user",
+                      "creator",
+                      "admin"
+                    ],
+                    "example": "creator",
+                    "description": "New role for the user"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User role updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid role or user ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "statusCode": 400,
+                  "message": "Invalid role specified",
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "details": {
+                      "provided": "superuser",
+                      "allowedRoles": [
+                        "user",
+                        "creator",
+                        "admin"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "429": {
+            "description": "Too many requests (rate limit: 10 per hour)"
+          }
+        }
+      }
+    },
+    "/api/profile/user/{userId}/status": {
+      "put": {
+        "tags": [
+          "Profile"
+        ],
+        "summary": "Activate or deactivate user (Admin only)",
+        "description": "Update a user's active status. Requires admin privileges. Rate limited to 10 requests per hour.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "User ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "isActive"
+                ],
+                "properties": {
+                  "isActive": {
+                    "type": "boolean",
+                    "example": false,
+                    "description": "Set to true to activate user, false to deactivate"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User status updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "statusCode": 400,
+                  "message": "isActive field is required and must be a boolean",
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "details": {
+                      "expected": "boolean (true or false)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "429": {
+            "description": "Too many requests - rate limit 10 per hour"
+          }
+        }
+      }
+    },
+    "/api/quiz/channel/{channelId}": {
+      "post": {
+        "tags": [
+          "Quizzes"
+        ],
+        "summary": "Create a new question for a channel",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "question": {
+                    "type": "string"
+                  },
+                  "options": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "correctAnswer": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Question created successfully"
+          }
+        }
+      }
+    },
+    "/api/quiz/channel/{channelId}/bulk": {
+      "post": {
+        "tags": [
+          "Quizzes"
+        ],
+        "summary": "Bulk create questions for a channel",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "questions": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Quiz"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Questions bulk created successfully"
+          }
+        }
+      }
+    },
+    "/api/quiz/channel/{channelId}/questions": {
+      "get": {
+        "tags": [
+          "Quizzes"
+        ],
+        "summary": "Get all questions for a channel",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Questions retrieved successfully"
+          }
+        }
+      }
+    },
+    "/api/quiz/channel/{channelId}/submit": {
+      "post": {
+        "tags": [
+          "Quizzes"
+        ],
+        "summary": "Submit a quiz",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Quiz submitted successfully"
+          }
+        }
+      }
+    },
+    "/api/v1/rag/query": {
+      "post": {
+        "summary": "Query the RAG chatbot",
+        "tags": [
+          "RAG"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "query"
+                ],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "Natural language query about the database"
+                  },
+                  "userId": {
+                    "type": "string",
+                    "description": "Optional user ID filter"
+                  },
+                  "channelId": {
+                    "type": "string",
+                    "description": "Optional channel ID filter"
+                  },
+                  "filters": {
+                    "type": "object",
+                    "properties": {
+                      "topic": {
+                        "type": "string"
+                      },
+                      "username": {
+                        "type": "string"
+                      },
+                      "dateRange": {
+                        "type": "object",
+                        "properties": {
+                          "start": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "end": {
+                            "type": "string",
+                            "format": "date"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Query processed successfully"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/v1/rag/diagram": {
+      "post": {
+        "summary": "Generate diagram based on query",
+        "tags": [
+          "RAG"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "query"
+                ],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "Query to generate diagram for"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Diagram generated successfully"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/v1/rag/index": {
+      "post": {
+        "summary": "Index database content for RAG (Admin only)",
+        "tags": [
+          "RAG"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Content indexed successfully"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/v1/rag/initialize": {
+      "post": {
+        "summary": "Initialize vector store (Admin only)",
+        "tags": [
+          "RAG"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vector store initialized successfully"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/v1/support/contact": {
+      "post": {
+        "tags": [
+          "Support"
+        ],
+        "summary": "Send a support message",
+        "description": "Public endpoint to send name, email, subject and message to the support team.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "email",
+                  "subject",
+                  "message"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "subject": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Message accepted for delivery"
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Root endpoint",
+        "description": "Welcome message for the API",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "🧠 Welcome to the Blogging/Quiz API Service"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health check endpoint",
+        "description": "Check the health and status of the API server",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Server is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthCheck"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable (database not connected)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthCheck"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
