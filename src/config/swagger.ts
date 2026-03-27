@@ -1,4 +1,5 @@
 import swaggerJsdoc from 'swagger-jsdoc';
+import path from 'path';
 
 const options: swaggerJsdoc.Options = {
   definition: {
@@ -501,9 +502,18 @@ Authorization: Bearer <your_access_token>
     security: []
   },
   // Use different paths for development (TypeScript) and production (JavaScript)
+  // __dirname will be <root>/src/config in dev and <root>/dist/config in prod
   apis: process.env.NODE_ENV === 'production'
-    ? ['./dist/routes/**/*.js', './dist/controllers/**/*.js', './dist/app.js']
-    : ['./src/routes/**/*.ts', './src/controllers/**/*.ts', './src/app.ts']
+    ? [
+      path.join(__dirname, '../routes/**/*.js'),
+      path.join(__dirname, '../controllers/**/*.js'),
+      path.join(__dirname, '../app.js')
+    ]
+    : [
+      path.join(__dirname, '../routes/**/*.ts'),
+      path.join(__dirname, '../controllers/**/*.ts'),
+      path.join(__dirname, '../app.ts')
+    ]
 };
 
 const swaggerSpec = swaggerJsdoc(options);
