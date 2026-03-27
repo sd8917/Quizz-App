@@ -37,6 +37,9 @@ app.use(cors());
 app.use(helmet());
 app.use(compression());
 
+// Swagger docs fix
+app.set('trust proxy', 1);
+
 // Passport (Google OAuth)
 configurePassport();
 app.use(passport.initialize());

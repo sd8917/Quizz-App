@@ -41,7 +41,7 @@ Authorization: Bearer <your_access_token>
       `,
       contact: {
         name: 'API Support',
-        email: 'support@quizapp.com'
+        email: 'triviaverse.contact@gmail.com'
       },
       license: {
         name: 'MIT',
@@ -358,27 +358,27 @@ Authorization: Bearer <your_access_token>
               type: 'object',
               description: 'Memory usage information',
               properties: {
-                rss: { 
+                rss: {
                   type: 'string',
                   example: '45.23 MB',
                   description: 'Resident Set Size - total memory allocated'
                 },
-                heapTotal: { 
+                heapTotal: {
                   type: 'string',
                   example: '20.15 MB',
                   description: 'Total heap allocated'
                 },
-                heapUsed: { 
+                heapUsed: {
                   type: 'string',
                   example: '15.42 MB',
                   description: 'Heap memory currently in use'
                 },
-                external: { 
+                external: {
                   type: 'string',
                   example: '2.10 MB',
                   description: 'Memory used by C++ objects bound to JS'
                 },
-                arrayBuffers: { 
+                arrayBuffers: {
                   type: 'string',
                   example: '1.05 MB',
                   description: 'Memory allocated for ArrayBuffers and SharedArrayBuffers'
@@ -501,7 +501,7 @@ Authorization: Bearer <your_access_token>
     security: []
   },
   // Use different paths for development (TypeScript) and production (JavaScript)
-  apis: process.env.NODE_ENV === 'production' 
+  apis: process.env.NODE_ENV === 'production'
     ? ['./dist/routes/**/*.js', './dist/controllers/**/*.js', './dist/app.js']
     : ['./src/routes/**/*.ts', './src/controllers/**/*.ts', './src/app.ts']
 };
