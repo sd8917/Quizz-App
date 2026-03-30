@@ -1,4 +1,12 @@
 import { createLogger, format, transports } from 'winston';
+import path from 'path';
+import fs from 'fs';
+
+// Ensure the logs directory exists relative to the project root
+const logDir = path.join(__dirname, '../../logs');
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+}
 
 const logger = createLogger({
   level: 'info',
@@ -16,8 +24,8 @@ const logger = createLogger({
         format.simple()
       )
     }),
-    new transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new transports.File({ filename: 'logs/combined.log' })
+    new transports.File({ filename: path.join(logDir, 'error.log'), level: 'error' }),
+    new transports.File({ filename: path.join(logDir, 'combined.log') })
   ]
 });
 
