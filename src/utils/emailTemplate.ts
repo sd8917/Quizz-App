@@ -399,13 +399,16 @@ export function getWelcomeEmailTemplate(
       color: #6b7280;
       font-size: 14px;
     }
+    .header-title {
+      color: #f9fafb;
+    }
   </style>
 </head>
 <body>
   <div class="email-container">
     <div class="header">
-      <h1>🎉 Welcome, ${username}!</h1>
-      <p>Your journey to excellence starts now</p>
+      <h1 class="header-title">🎉 Welcome, ${username}!</h1>
+      <p class="header-title">Your journey to excellence starts now</p>
     </div>
     <div class="content">
       <p class="welcome-message">
