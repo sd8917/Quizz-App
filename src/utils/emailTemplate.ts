@@ -399,13 +399,16 @@ export function getWelcomeEmailTemplate(
       color: #6b7280;
       font-size: 14px;
     }
+    .header-title {
+      color: #f9fafb;
+    }
   </style>
 </head>
 <body>
   <div class="email-container">
     <div class="header">
-      <h1>🎉 Welcome, ${username}!</h1>
-      <p>Your journey to excellence starts now</p>
+      <h1 class="header-title">🎉 Welcome, ${username}!</h1>
+      <p class="header-title">Your journey to excellence starts now</p>
     </div>
     <div class="content">
       <p class="welcome-message">
@@ -569,7 +572,7 @@ export function getSupportEmailTemplate(
       body { margin:0; padding:0; background:#f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color:#374151; }
       .container { max-width: 680px; margin: 28px auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(2,6,23,0.08); }
       .header { background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); padding: 28px 24px; color: #fff; text-align: left; }
-      .header h1 { margin:0; font-size:20px; letter-spacing: -0.2px; }
+      .header h1 { margin:0; font-size:20px; letter-spacing: -0.2px;color: #eef2ff }
       .sub { margin-top:6px; font-size:13px; opacity:0.92; }
       .body { padding: 24px; }
       .meta { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
