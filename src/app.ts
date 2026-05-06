@@ -29,6 +29,9 @@ import { startAutoRecoveryWorker } from './workers/autoRecoveryWorker';
 
 const app = express();
 
+// Disable x-powered-by header for security
+app.disable('x-powered-by');
+
 // --- Core middlewares ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
