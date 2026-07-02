@@ -8,6 +8,7 @@ import User from "../models/user.model";
 import { Channel } from "../models/channel.model";
 import { Question } from "../models/quiz.model";
 import { Attempt } from "../models/attempt.model";
+import ChatSession, { IChatMessage } from "../models/chatSession.model";
 
 /* =========================================================
    Custom Gemini Embedding Wrapper (for LangChain)
@@ -53,6 +54,8 @@ class GeminiEmbeddings {
 
 export interface RAGQuery {
   query: string;
+  userId?: string;
+  sessionId?: string;
   filters?: RAGFilters;
 }
 
@@ -217,18 +220,150 @@ export class RAGService {
      Query RAG
   ========================================================= */
 
-  async query(params: RAGQuery): Promise<RAGResponse> {
-    try {
-      const { query } = params;
+  /**
+   * Generates a standalone search query from conversation history and user query
+   */
+  private async generateStandaloneQuery(
+    query: string,
+    history: IChatMessage[]
+  ): Promise<string> {
+    if (history.length === 0) {
+      return query;
+    }
 
-      if (!query.trim().endsWith("?")) {
-        throw new ApiError(
-          400,
-          'Query must be a question ending with "?"'
-        );
+    try {
+      const conversationHistory = history
+        .map((msg) => `${msg.role === "user" ? "User" : "Model"}: ${msg.content}`)
+        .join("\n");
+
+      const prompt = `
+Given the conversation history and a follow-up query, generate a standalone search query that contains all necessary details from the history.
+Do not answer the query, just return the standalone search query. Make sure it ends with a question mark.
+
+Conversation History:
+${conversationHistory}
+
+Follow-up Query:
+"${query}"
+
+Standalone Search Query:
+`;
+
+      const response = await this.genAI.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+
+      const standalone = response.text?.trim() || query;
+      logger.info(`🔄 Rewrote query "${query}" to standalone: "${standalone}"`);
+      return standalone;
+    } catch (error) {
+      logger.error(`❌ Error generating standalone query: ${error}`);
+      return query;
+    }
+  }
+
+  /**
+   * Re-ranks search results using Gemini LLM
+   */
+  private async reRankDocuments(
+    query: string,
+    documents: any[]
+  ): Promise<any[]> {
+    if (documents.length <= 1) {
+      return documents;
+    }
+
+    try {
+      const documentsList = documents
+        .map((doc, idx) => `Document ID: ${idx}\nContent: [${doc.metadata?.type || 'unknown'}] ${doc.text}`)
+        .join("\n\n");
+
+      const prompt = `
+You are an expert search re-ranker. Given the user's search query and a list of retrieved documents, evaluate the relevance of each document to the query.
+Assign a relevance score between 0.0 (completely irrelevant) and 1.0 (highly relevant) to each document.
+
+User Query:
+"${query}"
+
+Retrieved Documents:
+${documentsList}
+
+Return the results as a JSON array of objects, containing the Document ID and the relevance score, sorted in descending order of relevance. Do not return any other text or markdown formatting besides the valid JSON.
+Example format:
+[
+  {"id": 0, "score": 0.95},
+  {"id": 1, "score": 0.3}
+]
+`;
+
+      const response = await this.genAI.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json"
+        }
+      });
+
+      const responseText = response.text || "";
+      const cleanJson = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
+      const rankedList = JSON.parse(cleanJson);
+
+      const rankedDocs: any[] = [];
+      for (const item of rankedList) {
+        const index = parseInt(item.id, 10);
+        if (index >= 0 && index < documents.length) {
+          const doc = documents[index];
+          rankedDocs.push({
+            ...doc,
+            reRankScore: item.score,
+          });
+        }
       }
 
-      const queryEmbedding = await this.embeddings.embedQuery(query);
+      rankedDocs.sort((a, b) => b.reRankScore - a.reRankScore);
+      return rankedDocs;
+    } catch (error) {
+      logger.error(`❌ Re-ranking error: ${error}`);
+      return documents;
+    }
+  }
+
+  async query(params: RAGQuery): Promise<RAGResponse> {
+    try {
+      let { query, userId, sessionId } = params;
+
+      // UX improvement: auto-append question mark if missing
+      let normalizedQuery = query.trim();
+      if (!normalizedQuery.endsWith("?")) {
+        normalizedQuery += "?";
+      }
+
+      let history: IChatMessage[] = [];
+      let chatSession: any = null;
+      let activeSessionId = sessionId;
+
+      // Retrieve/create chat session if userId is provided
+      if (userId) {
+        if (activeSessionId) {
+          chatSession = await ChatSession.findOne({ sessionId: activeSessionId, userId });
+        }
+
+        if (!chatSession) {
+          activeSessionId = activeSessionId || new mongoose.Types.ObjectId().toString();
+          chatSession = await ChatSession.create({
+            userId,
+            sessionId: activeSessionId,
+            messages: []
+          });
+        }
+        history = chatSession.messages || [];
+      }
+
+      // Generate standalone query if history exists
+      const standaloneQuery = await this.generateStandaloneQuery(normalizedQuery, history);
+
+      const queryEmbedding = await this.embeddings.embedQuery(standaloneQuery);
 
       const pipeline = [
         {
@@ -236,8 +371,8 @@ export class RAGService {
             index: "default",
             path: "embedding",
             queryVector: queryEmbedding,
-            numCandidates: 10,
-            limit: 3,
+            numCandidates: 30, // Retrieve larger candidate pool
+            limit: 10,         // Retrieve more candidates for re-ranking
           },
         },
         {
@@ -257,15 +392,43 @@ export class RAGService {
         .aggregate(pipeline)
         .toArray();
 
+      // Apply re-ranking
+      const reRankedResults = await this.reRankDocuments(standaloneQuery, searchResults);
+
+      // Select top 3 after re-ranking
+      const topResults = reRankedResults.slice(0, 3);
+
+      // Generate response using history & top results
       const answer = await this.generateAnswerWithLLM(
-        query,
-        searchResults
+        normalizedQuery,
+        topResults,
+        history
       );
+
+      // Save messages to history
+      if (chatSession) {
+        chatSession.messages.push({
+          role: 'user',
+          content: normalizedQuery,
+          timestamp: new Date()
+        });
+        chatSession.messages.push({
+          role: 'model',
+          content: answer,
+          timestamp: new Date()
+        });
+        await chatSession.save();
+      }
 
       return {
         answer,
-        sources: searchResults,
-        metadata: { query },
+        sources: topResults,
+        metadata: {
+          query: normalizedQuery,
+          standaloneQuery,
+          sessionId: activeSessionId,
+          historyCount: history.length
+        },
       };
     } catch (error: any) {
       logger.error(`❌ RAG Query Error: ${error}`);
@@ -282,31 +445,37 @@ export class RAGService {
 
   private async generateAnswerWithLLM(
     query: string,
-    searchResults: any[]
+    searchResults: any[],
+    history: IChatMessage[] = []
   ): Promise<string> {
     try {
       const context = searchResults
-        .map((doc) => `[${doc.metadata?.type}] ${doc.text}`)
+        .map((doc) => `[${doc.metadata?.type || 'unknown'}] ${doc.text}`)
         .join("\n\n");
 
+      const conversationHistory = history
+        .map((msg) => `${msg.role === "user" ? "User" : "Model"}: ${msg.content}`)
+        .join("\n");
+
       const prompt = `
-Based on the following retrieved information, answer the user's query.
+Based on the retrieved database information and the conversation history, answer the user's query.
+
+Retrieved Database Information:
+${context}
+
+Conversation History (if any):
+${conversationHistory}
 
 User Query:
 "${query}"
 
-Retrieved Information:
-${context}
-
-If the information is insufficient, politely say so.
+If the information is insufficient, politely say so. Provide a direct, natural, and helpful response.
 `;
 
       const result = await this.genAI.models.generateContent({
         model: "gemini-2.5-flash",
         contents: prompt,
       });
-
-      console.log("RESULT ", result);
 
       return (result as any).text;
     } catch (error: any) {
