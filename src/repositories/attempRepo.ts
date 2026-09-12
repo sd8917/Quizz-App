@@ -29,4 +29,14 @@ export class AttemptRepository {
       .limit(20);
     return res
   }
+
+  async getChannelSubmissions(channelId: string) {
+    return Attempt.find({ channelId })
+      .populate("userId", "username email profilePicture")
+      .sort({ submittedAt: -1 });
+  }
+
+  async getAttemptById(attemptId: string) {
+    return Attempt.findById(attemptId).populate("userId", "username email profilePicture");
+  }
 }

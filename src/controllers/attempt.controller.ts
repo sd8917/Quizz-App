@@ -44,6 +44,29 @@ export class AttemptController {
     }
   };
 
+  getChannelSubmissions = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { channelId } = req.params;
+      const submissions = await this.attemptService.getChannelSubmissions(channelId);
+      sendSuccess(res, submissions, 'Channel submissions retrieved successfully');
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getAttemptById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { attemptId } = req.params;
+      const attempt = await this.attemptService.getAttemptById(attemptId);
+      if (!attempt) {
+        return sendBadRequest(res, 'Attempt not found');
+      }
+      sendSuccess(res, attempt, 'Attempt retrieved successfully');
+    } catch (err) {
+      next(err);
+    }
+  };
+
   handleFullscreenViolation = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.id;
