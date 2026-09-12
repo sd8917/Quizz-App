@@ -100,4 +100,48 @@ router.get("/channel/:channelId/leaderboard", attemptController.getLeaderboard);
  */
 router.post("/channel/:channelId/fullscreen-violation", attemptController.handleFullscreenViolation);
 
+// Channel submissions
+/**
+ * @openapi
+ * /api/attempt/channel/{channelId}/submissions:
+ *   get:
+ *     tags:
+ *       - Attempts
+ *     summary: Get all submissions for a channel
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: channelId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Submissions retrieved successfully
+ */
+router.get("/channel/:channelId/submissions", attemptController.getChannelSubmissions);
+
+// Specific attempt details
+/**
+ * @openapi
+ * /api/attempt/{attemptId}:
+ *   get:
+ *     tags:
+ *       - Attempts
+ *     summary: Get specific attempt details
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: attemptId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Attempt retrieved successfully
+ */
+router.get("/:attemptId", attemptController.getAttemptById);
+
 export { router as attemptRoutes };

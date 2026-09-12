@@ -58,6 +58,14 @@ export class AttemptService {
     return this.attemptRepo.getUserAttempts(userId);
   }
 
+  async getChannelSubmissions(channelId: string) {
+    return this.attemptRepo.getChannelSubmissions(channelId);
+  }
+
+  async getAttemptById(attemptId: string) {
+    return this.attemptRepo.getAttemptById(attemptId);
+  }
+
   
 async getLeaderboard(channelId: string) {
   const channelObjectId = new mongoose.Types.ObjectId(channelId);
