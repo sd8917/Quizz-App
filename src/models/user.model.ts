@@ -40,6 +40,7 @@ const UserSchema = new Schema<IUser>({
     isActive: { type: Boolean, default: true },
     isPremium: { type: Boolean, default: false },
     premiumExpiresAt: { type: Date },
+    activePlan: { type: Schema.Types.ObjectId, ref: 'PricingPlan' },
     createdAt: { type: Date, default: Date.now },
     lastLoginAt: { type: Date },
     lastActiveAt: { type: Date }

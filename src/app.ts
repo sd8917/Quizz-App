@@ -26,6 +26,8 @@ import * as cron from 'node-cron';
 import { ragRoutes } from './routes/v1/rag.routes';
 import autoRecoveryRoutes from './routes/v1/autoRecovery.routes';
 import { startAutoRecoveryWorker } from './workers/autoRecoveryWorker';
+import { paymentRoutes } from './routes/v1/payment.routes';
+import { pricingRoutes } from './routes/v1/pricing.routes';
 
 const app = express();
 
@@ -233,6 +235,12 @@ app.use('/api/feedback', feedbackRoutes);
 
 // rag routes
 app.use('/api/rag', ragRoutes)
+
+// payment routes
+app.use('/api/payment', paymentRoutes);
+
+// pricing routes
+app.use('/api/pricing', pricingRoutes);
 
 // Auto-recovery routes (for AI error recovery)
 app.use('/api/auto-recovery', autoRecoveryRoutes);
