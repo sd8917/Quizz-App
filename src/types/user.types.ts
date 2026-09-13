@@ -11,6 +11,7 @@ export interface IUser extends Document {
   isActive: boolean;
   isPremium: boolean;
   premiumExpiresAt?: Date;
+  activePlan?: any; // ObjectId or populated PricingPlan
   lastLoginAt?: Date;
   lastActiveAt?: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -27,6 +28,7 @@ export interface IUserResponse {
   provider?: 'local' | 'google';
   isPremium?: boolean;
   premiumExpiresAt?: Date;
+  activePlan?: any;
   accessToken?: string;
   refreshToken?: string;
   lastLoginAt?: Date;
@@ -42,6 +44,7 @@ export interface IUserDocument {
   isActive: boolean;
   isPremium: boolean;
   premiumExpiresAt?: Date;
+  activePlan?: any;
   createdAt: Date;
   lastActiveAt?: Date;
   lastLoginAt?: Date;
