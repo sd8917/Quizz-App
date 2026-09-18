@@ -6,6 +6,7 @@ import User from '../models/user.model';
 import { RefreshToken } from '../models/refreshToken.model';
 import { PasswordReset } from '../models/passwordReset.model';
 import { sendWelcomeEmail, sendPasswordResetEmail } from '../utils/mailer';
+import logger from '../utils/logger';
 
 export class AuthService {
   // Generate access token (5 minutes)
@@ -49,7 +50,7 @@ export class AuthService {
   }
 
   async register(userData: IRegisterRequest): Promise<IUserResponse> {
-    
+
     const { username, email, password } = userData;
 
     // Check if user exists by email
@@ -68,7 +69,7 @@ export class AuthService {
 
     // Send welcome email asynchronously (don't block registration)
     sendWelcomeEmail(user.email, user.username).catch((err: any) => {
-      console.error('Failed to send welcome email:', err);
+      logger.error('Failed to send welcome email:', err);
     });
 
     const accessToken = AuthService.generateAccessToken((user._id as string).toString());
@@ -80,6 +81,7 @@ export class AuthService {
     const email = profile.emails && profile.emails.length > 0 ? profile.emails[0].value : undefined;
 
     if (!email) {
+      logger.error("Google account does not have a public email");
       throw new Error('Google account does not have a public email');
     }
 
@@ -120,12 +122,14 @@ export class AuthService {
     // Find user and validate
     const user = await User.findOne({ email });
     if (!user) {
+      logger.warn("Invalid credentials");
       throw new Error('Invalid credentials');
     }
 
     // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      logger.warn("Invalid credentials");
       throw new Error('Invalid credentials');
     }
 
@@ -143,6 +147,7 @@ export class AuthService {
   async getUserById(id: string): Promise<IUserResponse> {
     const user = await User.findById(id);
     if (!user) {
+      logger.warn("User not found");
       throw new Error('User not found');
     }
 
@@ -151,23 +156,25 @@ export class AuthService {
 
   async refreshAccessToken(refreshTokenString: string): Promise<{ accessToken: string }> {
     // Find refresh token in database
-    const refreshToken = await RefreshToken.findOne({ 
+    const refreshToken = await RefreshToken.findOne({
       token: refreshTokenString,
-      isRevoked: false 
+      isRevoked: false
     });
 
     if (!refreshToken) {
+      logger.warn("Invalid refresh token");
       throw new Error('Invalid refresh token');
     }
 
     // Check if token is expired
     if (new Date() > refreshToken.expiresAt) {
+      logger.error("Refresh token expired");
       throw new Error('Refresh token expired');
     }
 
     // Generate new access token
     const accessToken = AuthService.generateAccessToken(refreshToken.userId.toString());
-    
+
     return { accessToken };
   }
 
@@ -198,25 +205,25 @@ export class AuthService {
    * - Always returns success (prevents email enumeration)
    */
   async requestPasswordReset(
-    email: string, 
-    ipAddress?: string, 
+    email: string,
+    ipAddress?: string,
     userAgent?: string
   ): Promise<{ message: string }> {
     // Find user by email
     const user = await User.findOne({ email });
-    
+
     // IMPORTANT: Always return success to prevent email enumeration attacks
     // Don't reveal whether the email exists or not
     if (!user) {
-      return { 
-        message: 'If your email is registered, you will receive a password reset link shortly.' 
+      return {
+        message: 'If your email is registered, you will receive a password reset link shortly.'
       };
     }
 
     // Check if user is active
     if (!user.isActive) {
-      return { 
-        message: 'If your email is registered, you will receive a password reset link shortly.' 
+      return {
+        message: 'If your email is registered, you will receive a password reset link shortly.'
       };
     }
 
@@ -228,13 +235,13 @@ export class AuthService {
 
     // Generate secure random token
     const resetToken = crypto.randomBytes(32).toString('hex');
-    
+
     // Hash token before storing (add extra security layer)
     const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
     // Create reset record with 1-hour expiration
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-    
+
     await PasswordReset.create({
       userId: user._id,
       token: hashedToken,
@@ -252,8 +259,8 @@ export class AuthService {
       console.error('Failed to send password reset email:', err);
     });
 
-    return { 
-      message: 'If your email is registered, you will receive a password reset link shortly.' 
+    return {
+      message: 'If your email is registered, you will receive a password reset link shortly.'
     };
   }
 
@@ -266,7 +273,7 @@ export class AuthService {
    * - Invalidates all refresh tokens (logs out all devices)
    */
   async resetPassword(
-    token: string, 
+    token: string,
     newPassword: string
   ): Promise<{ message: string }> {
     // Hash the token to match what's stored in DB
@@ -308,8 +315,8 @@ export class AuthService {
       { isRevoked: true }
     );
 
-    return { 
-      message: 'Password reset successful. Please login with your new password.' 
+    return {
+      message: 'Password reset successful. Please login with your new password.'
     };
   }
 
@@ -331,9 +338,9 @@ export class AuthService {
     }
 
     const user = resetRecord.userId as any;
-    return { 
-      valid: true, 
-      email: user.email 
+    return {
+      valid: true,
+      email: user.email
     };
   }
 }
