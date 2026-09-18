@@ -1,6 +1,14 @@
 import { Router } from 'express';
-import { performAutoRecovery, approveRecovery, rejectRecovery, getApprovalStatus, getAllPendingRequests, analyzeErrorsAndGetSuggestions, sendDailyErrorSummary } from '../../services/autoRecovery.service';
-import logger from '../../utils/logger';
+import { 
+  triggerAutoRecovery, 
+  autoApplyRecovery, 
+  getPendingRequests, 
+  approveRecoveryHandler, 
+  rejectRecoveryHandler, 
+  getRecoveryStatus, 
+  analyzeErrors, 
+  dailySummary 
+} from '../../controllers/autoRecovery.controller';
 
 const router = Router();
 
@@ -28,16 +36,7 @@ const router = Router();
  *       500:
  *         description: Error in auto-recovery process
  */
-router.post('/trigger', async (req, res) => {
-  try {
-    const { autoApply = false } = req.body;
-    const result = await performAutoRecovery(autoApply);
-    res.json(result);
-  } catch (error: any) {
-    logger.error('[AutoRecovery Route] Error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+router.post('/trigger', triggerAutoRecovery);
 
 /**
  * @swagger
@@ -52,15 +51,7 @@ router.post('/trigger', async (req, res) => {
  *       500:
  *         description: Error in auto-recovery process
  */
-router.post('/auto-apply', async (_req, res) => {
-  try {
-    const result = await performAutoRecovery(true);
-    res.json(result);
-  } catch (error: any) {
-    logger.error('[AutoRecovery Route] Auto-apply Error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+router.post('/auto-apply', autoApplyRecovery);
 
 /**
  * @swagger
@@ -73,15 +64,7 @@ router.post('/auto-apply', async (_req, res) => {
  *       200:
  *         description: List of pending requests
  */
-router.get('/pending', async (_req, res) => {
-  try {
-    const pendingRequests = getAllPendingRequests();
-    res.json({ success: true, data: pendingRequests });
-  } catch (error: any) {
-    logger.error('[AutoRecovery Route] Error fetching pending requests:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+router.get('/pending', getPendingRequests);
 
 /**
  * @swagger
@@ -103,32 +86,7 @@ router.get('/pending', async (_req, res) => {
  *       404:
  *         description: Approval request not found
  */
-router.get('/approve/:id', async (req, res) => {
-  const { id } = req.params;
-  const result = await approveRecovery(id);
-  
-  if (req.accepts('html')) {
-    const color = result.success ? '#4CAF50' : '#F44336';
-    const html = `
-      <html>
-        <body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background: #f9f9f9;">
-          <div style="background: white; max-width: 500px; margin: auto; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-            <h1 style="color: ${color}; margin-top: 0;">${result.success ? '✅ Fix Approved' : '❌ Failed'}</h1>
-            <p style="font-size: 18px; color: #333;">${result.message}</p>
-            <p style="color: #666; margin-top: 30px;">You can now close this tab.</p>
-          </div>
-        </body>
-      </html>
-    `;
-    return res.send(html);
-  }
-
-  if (result.success) {
-    res.json(result);
-  } else {
-    res.status(404).json(result);
-  }
-});
+router.get('/approve/:id', approveRecoveryHandler);
 
 /**
  * @swagger
@@ -150,32 +108,7 @@ router.get('/approve/:id', async (req, res) => {
  *       404:
  *         description: Approval request not found
  */
-router.get('/reject/:id', (req, res) => {
-  const { id } = req.params;
-  const result = rejectRecovery(id);
-  
-  if (req.accepts('html')) {
-    const color = result.success ? '#ff9800' : '#F44336';
-    const html = `
-      <html>
-        <body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background: #f9f9f9;">
-          <div style="background: white; max-width: 500px; margin: auto; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-            <h1 style="color: ${color}; margin-top: 0;">${result.success ? '🚫 Fix Rejected' : '❌ Failed'}</h1>
-            <p style="font-size: 18px; color: #333;">${result.message}</p>
-            <p style="color: #666; margin-top: 30px;">You can now close this tab.</p>
-          </div>
-        </body>
-      </html>
-    `;
-    return res.send(html);
-  }
-
-  if (result.success) {
-    res.json(result);
-  } else {
-    res.status(404).json(result);
-  }
-});
+router.get('/reject/:id', rejectRecoveryHandler);
 
 /**
  * @swagger
@@ -197,16 +130,7 @@ router.get('/reject/:id', (req, res) => {
  *       404:
  *         description: Request not found
  */
-router.get('/status/:id', (req, res) => {
-  const { id } = req.params;
-  const status = getApprovalStatus(id);
-  
-  if (status) {
-    res.json({ success: true, data: status });
-  } else {
-    res.status(404).json({ success: false, message: 'Approval request not found' });
-  }
-});
+router.get('/status/:id', getRecoveryStatus);
 
 /**
  * @swagger
@@ -221,15 +145,7 @@ router.get('/status/:id', (req, res) => {
  *       500:
  *         description: Error in analysis process
  */
-router.get('/analyze', async (_req, res) => {
-  try {
-    const result = await analyzeErrorsAndGetSuggestions();
-    res.json(result);
-  } catch (error: any) {
-    logger.error('[AutoRecovery Route] Error analyzing errors:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+router.get('/analyze', analyzeErrors);
 
 /**
  * @swagger
@@ -244,14 +160,6 @@ router.get('/analyze', async (_req, res) => {
  *       500:
  *         description: Error in sending daily summary
  */
-router.get('/daily-summary', async (_req, res) => {
-  try {
-    await sendDailyErrorSummary();
-    res.json({ success: true, message: 'Daily error summary sent' });
-  } catch (error: any) {
-    logger.error('[AutoRecovery Route] Error sending daily summary:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+router.get('/daily-summary', dailySummary);
 
 export default router;
