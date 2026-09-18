@@ -1,6 +1,8 @@
 import nodemailer from 'nodemailer';
+import crypto from 'crypto';
 import { getWelcomeEmailTemplate, getPasswordResetEmailTemplate, getChannelInviteEmailTemplate } from './emailTemplate';
 import { getSupportEmailTemplate } from './emailTemplate';
+import { emailQueue } from '../jobs/emailQueue';
 
 const transporter = nodemailer.createTransport({
   service: 'gmail', // or your email provider
@@ -10,7 +12,31 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+function getJobId(type: string, data: any) {
+  return crypto.createHash('sha256').update(type + JSON.stringify(data)).digest('hex');
+}
+
 export async function sendChannelInviteEmail(to: string, channelName: string, inviterName?: string) {
+  const data = { to, channelName, inviterName };
+  await emailQueue.add('channel-invite', data, { jobId: getJobId('channel-invite', data) });
+}
+
+export async function sendWelcomeEmail(to: string, username: string) {
+  const data = { to, username };
+  await emailQueue.add('welcome', data, { jobId: getJobId('welcome', data) });
+}
+
+export async function sendPasswordResetEmail(to: string, username: string, resetUrl: string) {
+  const data = { to, username, resetUrl };
+  await emailQueue.add('password-reset', data, { jobId: getJobId('password-reset', data) });
+}
+
+export async function sendSupportEmail(fromName: string, fromEmail: string, subjectLine: string, messageBody: string) {
+  const data = { fromName, fromEmail, subjectLine, messageBody };
+  await emailQueue.add('support', data, { jobId: getJobId('support', data) });
+}
+
+export async function _sendChannelInviteEmail(to: string, channelName: string, inviterName?: string) {
   const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:8000/api/';
   const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_USER;
 
@@ -30,7 +56,7 @@ export async function sendChannelInviteEmail(to: string, channelName: string, in
   await transporter.sendMail(mailOptions);
 }
 
-export async function sendWelcomeEmail(to: string, username: string) {
+export async function _sendWelcomeEmail(to: string, username: string) {
   const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:8000/api/';
 
   const {html, subject} = getWelcomeEmailTemplate(username, { 
@@ -48,7 +74,7 @@ export async function sendWelcomeEmail(to: string, username: string) {
   await transporter.sendMail(mailOptions);
 }
 
-export async function sendPasswordResetEmail(to: string, username: string, resetUrl: string) {
+export async function _sendPasswordResetEmail(to: string, username: string, resetUrl: string) {
   const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_USER;
 
   const { html, subject } = getPasswordResetEmailTemplate(resetUrl, username, {
@@ -66,7 +92,7 @@ export async function sendPasswordResetEmail(to: string, username: string, reset
   await transporter.sendMail(mailOptions);
 }
 
-export async function sendSupportEmail(fromName: string, fromEmail: string, subjectLine: string, messageBody: string) {
+export async function _sendSupportEmail(fromName: string, fromEmail: string, subjectLine: string, messageBody: string) {
   const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_USER;
 
   const { html } = getSupportEmailTemplate(fromName, fromEmail, subjectLine, messageBody, {

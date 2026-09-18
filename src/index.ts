@@ -3,6 +3,7 @@ dotenv.config();
 
 import app from './app';
 import { connectDB } from './config/database';
+import './jobs/emailWorker';
 
 const PORT = process.env.PORT || 8000;
 

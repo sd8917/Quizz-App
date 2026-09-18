@@ -107,6 +107,22 @@ router.get('/approve/:id', async (req, res) => {
   const { id } = req.params;
   const result = await approveRecovery(id);
   
+  if (req.accepts('html')) {
+    const color = result.success ? '#4CAF50' : '#F44336';
+    const html = `
+      <html>
+        <body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background: #f9f9f9;">
+          <div style="background: white; max-width: 500px; margin: auto; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <h1 style="color: ${color}; margin-top: 0;">${result.success ? '✅ Fix Approved' : '❌ Failed'}</h1>
+            <p style="font-size: 18px; color: #333;">${result.message}</p>
+            <p style="color: #666; margin-top: 30px;">You can now close this tab.</p>
+          </div>
+        </body>
+      </html>
+    `;
+    return res.send(html);
+  }
+
   if (result.success) {
     res.json(result);
   } else {
@@ -138,6 +154,22 @@ router.get('/reject/:id', (req, res) => {
   const { id } = req.params;
   const result = rejectRecovery(id);
   
+  if (req.accepts('html')) {
+    const color = result.success ? '#ff9800' : '#F44336';
+    const html = `
+      <html>
+        <body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background: #f9f9f9;">
+          <div style="background: white; max-width: 500px; margin: auto; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <h1 style="color: ${color}; margin-top: 0;">${result.success ? '🚫 Fix Rejected' : '❌ Failed'}</h1>
+            <p style="font-size: 18px; color: #333;">${result.message}</p>
+            <p style="color: #666; margin-top: 30px;">You can now close this tab.</p>
+          </div>
+        </body>
+      </html>
+    `;
+    return res.send(html);
+  }
+
   if (result.success) {
     res.json(result);
   } else {

@@ -544,6 +544,18 @@ export async function performAutoRecovery(autoApply: boolean = false): Promise<{
     return { success: true, message: 'No AI service error detected' };
   }
 
+  // Check if we already detected this specific error recently (within 24 hours) to avoid spamming emails
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const existingError = await ErrorDetection.findOne({
+    errorMessage: detectedError.errorDetails.message,
+    detectedAt: { $gte: twentyFourHoursAgo }
+  });
+
+  if (existingError) {
+    logger.info('[AutoRecovery] Error already detected and reported recently. Skipping.');
+    return { success: true, message: 'Error already detected recently. Skipping to prevent duplicate emails.' };
+  }
+
   logger.info(`[AutoRecovery] AI error detected: ${detectedError.errorType}`);
 
   // Determine the fix based on error type
