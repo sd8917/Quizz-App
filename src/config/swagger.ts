@@ -55,7 +55,7 @@ Authorization: Bearer <your_access_token>
         description: 'Development server'
       },
       {
-        url: 'https://api.triviaverse.site',
+        url: 'https://api.triviaverse.shop',
         description: 'Production server'
       }
     ],

@@ -41,8 +41,8 @@ app.use(cookieParser());
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://triviaverse.site',
-  'https://www.triviaverse.site'
+  'https://triviaverse.shop',
+  'https://www.triviaverse.shop'
 ];
 
 app.use(

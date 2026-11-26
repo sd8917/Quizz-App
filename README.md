@@ -1,4 +1,4 @@
-# triviaverse.site API
+# triviaverse.shop API
 
 A scalable backend for a quiz collaboration platform — enabling teams to create channels, invite members, add and approve questions, and manage archives.
 Built with Node.js, Express, MongoDB, and Redis.
